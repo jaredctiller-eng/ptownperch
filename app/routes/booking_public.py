@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -13,6 +14,8 @@ from app.models import Reservation
 from app.routes.admin import _get_property_or_404
 from app.slack.blocks import build_inquiry_blocks
 from app.slack.notify import post_slack_blocks
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["booking"])
 templates = Jinja2Templates(directory="app/templates")
@@ -68,12 +71,15 @@ async def book_request_submit(
     await session.commit()
     await session.refresh(reservation)
 
-    await post_slack_blocks(
-        build_inquiry_blocks(
-            property_name=prop.name, reservation_id=reservation.id, guest_name=guest_name,
-            check_in=check_in, check_out=check_out, quote=quote,
+    try:
+        await post_slack_blocks(
+            build_inquiry_blocks(
+                property_name=prop.name, reservation_id=reservation.id, guest_name=guest_name,
+                check_in=check_in, check_out=check_out, quote=quote,
+            )
         )
-    )
+    except Exception:
+        logger.exception("slack post failed for inquiry #%s", reservation.id)
 
     return RedirectResponse(url="/book/thanks", status_code=303)
 

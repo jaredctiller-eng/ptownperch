@@ -70,6 +70,30 @@ async def test_post_book_rejects_overlap(client, session, prop):
     assert resp.status_code == 409
 
 
+async def test_post_book_succeeds_even_if_slack_post_fails(client, session, prop, monkeypatch):
+    prop.nightly_rate_cents = 20000
+    await session.flush()
+
+    async def failing_post_blocks(payload):
+        raise RuntimeError("slack down")
+
+    monkeypatch.setattr("app.routes.booking_public.post_slack_blocks", failing_post_blocks)
+
+    resp = await client.post(
+        "/book",
+        data={
+            "check_in": "2026-09-01", "check_out": "2026-09-05",
+            "guest_name": "Alice", "guest_email": "alice@example.com",
+            "guest_phone": "", "honeypot": "",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303  # inquiry still recorded despite Slack failure
+
+    stored = (await session.execute(select(Reservation))).scalar_one()
+    assert stored.status == "inquiry"
+
+
 async def test_post_book_requires_configured_rate(client, session, prop):
     resp = await client.post(
         "/book",
