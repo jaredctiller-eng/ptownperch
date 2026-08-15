@@ -11,7 +11,7 @@ dependencies = [
     "pydantic-settings",
     "httpx",
     "icalendar",
-    "apscheduler",
+    "apscheduler<4",
 ]
 
 [project.optional-dependencies]

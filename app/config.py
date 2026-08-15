@@ -10,10 +10,12 @@ class Settings(BaseSettings):
 
     @property
     def sqlalchemy_url(self) -> str:
-        # Railway provides postgresql://; SQLAlchemy async needs the asyncpg driver.
+        # Railway/Heroku provide postgresql:// or postgres://; async SQLAlchemy
+        # needs the asyncpg driver spelled out.
         url = self.database_url
-        if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        for prefix in ("postgresql://", "postgres://"):
+            if url.startswith(prefix):
+                return "postgresql+asyncpg://" + url.removeprefix(prefix)
         return url
 
 
