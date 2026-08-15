@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
@@ -20,7 +21,12 @@ async def lifespan(app: FastAPI):
     scheduler = AsyncIOScheduler()
     if settings.sync_interval_minutes > 0:
         scheduler.add_job(
-            sync_all_properties, "interval", minutes=settings.sync_interval_minutes
+            sync_all_properties,
+            "interval",
+            minutes=settings.sync_interval_minutes,
+            # Run once at boot rather than waiting a full interval: a redeploy
+            # would otherwise reset the clock and could postpone syncing forever.
+            next_run_time=datetime.now(UTC),
         )
         scheduler.start()
     yield
