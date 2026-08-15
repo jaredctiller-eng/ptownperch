@@ -66,3 +66,19 @@ async def test_adjacent_dates_do_not_collide(session, prop):
     await session.flush()
     result = await apply_airbnb_events(session, prop.id, [ev()])  # ends 9/5
     assert result.collisions == []
+
+
+async def test_resurrected_uid_reactivates_reservation(session, prop):
+    await apply_airbnb_events(session, prop.id, [ev()])
+    await apply_airbnb_events(session, prop.id, [])  # feed glitch: everything canceled
+    result = await apply_airbnb_events(session, prop.id, [ev()])  # feed recovers
+    assert [e.uid for e in result.new_events] == ["a@airbnb.com"]
+    stored = (await session.execute(select(Reservation))).scalar_one()
+    assert stored.status == "confirmed"
+
+
+async def test_already_canceled_uid_not_reported_again(session, prop):
+    await apply_airbnb_events(session, prop.id, [ev()])
+    await apply_airbnb_events(session, prop.id, [])
+    result = await apply_airbnb_events(session, prop.id, [])  # still absent
+    assert result.has_changes is False

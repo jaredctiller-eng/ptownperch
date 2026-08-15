@@ -42,7 +42,6 @@ async def apply_airbnb_events(
                 select(Reservation).where(
                     Reservation.property_id == property_id,
                     Reservation.source == "airbnb_ical",
-                    Reservation.status != "canceled",
                 )
             )
         )
@@ -55,7 +54,16 @@ async def apply_airbnb_events(
     for event in events:
         if event.uid in by_uid:
             reservation = by_uid[event.uid]
-            if (reservation.check_in, reservation.check_out) != (event.start, event.end):
+            if reservation.status == "canceled":
+                # Resurrected: the feed dropped it (transient glitch or a real
+                # cancel/rebook) and it's back. Reactivate rather than trying
+                # to insert a new row, which would violate the UID uniqueness
+                # constraint.
+                reservation.status = "confirmed"
+                reservation.check_in = event.start
+                reservation.check_out = event.end
+                result.new_events.append(event)
+            elif (reservation.check_in, reservation.check_out) != (event.start, event.end):
                 reservation.check_in = event.start
                 reservation.check_out = event.end
                 result.changed_events.append(event)
@@ -73,7 +81,7 @@ async def apply_airbnb_events(
             result.new_events.append(event)
 
     for uid, reservation in by_uid.items():
-        if uid not in feed_uids:
+        if uid not in feed_uids and reservation.status != "canceled":
             reservation.status = "canceled"
             result.canceled_uids.append(uid)
 
