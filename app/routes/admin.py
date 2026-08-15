@@ -196,6 +196,7 @@ async def admin_status(
         ],
         "earliest_check_in": span_row[0],
         "latest_check_in": span_row[1],
+        "contract_has_unresolved_blanks": has_unresolved_blanks(prop.contract_template or ""),
     }
 
 

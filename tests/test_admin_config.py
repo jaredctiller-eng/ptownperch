@@ -30,6 +30,17 @@ async def test_put_contract_template_rejects_when_blanks_remain(client, prop, mo
     assert body["has_unresolved_blanks"] is True
 
 
+async def test_status_surfaces_unresolved_blanks(client, session, prop, monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    prop.contract_template = "Deposit: $[____]"
+    await session.flush()
+
+    resp = await client.get("/admin/status", auth=("ops", "secret"))
+    assert resp.status_code == 200
+    assert resp.json()["contract_has_unresolved_blanks"] is True
+
+
 async def test_mark_paid_requires_signature(client, session, prop, monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "admin_password", "secret")
