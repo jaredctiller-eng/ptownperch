@@ -12,6 +12,9 @@ dependencies = [
     "httpx",
     "icalendar",
     "apscheduler<4",
+    "alembic",
+    "jinja2",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
