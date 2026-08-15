@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Your Booking — Ptown Perch</title></head>
+<body style="font-family: sans-serif; max-width: 640px; margin: 2rem auto;">
+  <h1>Your Booking</h1>
+  <p>{{ check_in }} → {{ check_out }} — Total due: {{ total }}</p>
+  <p>Send payment via Venmo (@ptownperch) or Zelle (bookings@ptownperch.com) for the total above.</p>
+
+  {% if signed %}
+    <h2>Signed rental agreement</h2>
+    <pre style="white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem;">{{ contract_text }}</pre>
+    <p>Signed by {{ signed_name }} on {{ signed_at }}. Thank you!</p>
+  {% else %}
+    <h2>Rental agreement — please review and sign</h2>
+    <pre style="white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem;">{{ contract_text }}</pre>
+    <form method="post" action="/book/{{ token }}/sign" id="sign-form">
+      <p><label>Full legal name <input type="text" name="signed_name" required></label></p>
+      <p><label>Home address <input type="text" name="guest_home_address" required></label></p>
+      <p><label>Occupant names (comma-separated) <input type="text" name="occupant_names" required></label></p>
+      <p>Signature:<br>
+        <canvas id="sig-pad" width="500" height="200" style="border:1px solid #333; touch-action:none;"></canvas><br>
+        <button type="button" id="sig-clear">Clear</button>
+      </p>
+      <input type="hidden" name="signature_image" id="signature_image">
+      <p><button type="submit">Sign and Submit</button></p>
+    </form>
+    <script>
+    (function () {
+      var canvas = document.getElementById('sig-pad');
+      var ctx = canvas.getContext('2d');
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      var drawing = false;
+
+      function pos(e) {
+        var rect = canvas.getBoundingClientRect();
+        var point = e.touches ? e.touches[0] : e;
+        return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+      }
+      function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+      function move(e) { if (!drawing) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }
+      function end() { drawing = false; }
+
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', end);
+      canvas.addEventListener('touchstart', start);
+      canvas.addEventListener('touchmove', move);
+      canvas.addEventListener('touchend', end);
+      document.getElementById('sig-clear').addEventListener('click', function () {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      });
+      document.getElementById('sign-form').addEventListener('submit', function () {
+        document.getElementById('signature_image').value = canvas.toDataURL('image/png');
+      });
+    })();
+    </script>
+  {% endif %}
+</body>
+</html>
