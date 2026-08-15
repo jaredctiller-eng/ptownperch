@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     property_name: str = "Ptown Perch"
     airbnb_ical_url: str = ""
 
+    # Admin API (direct bookings). Empty password fails closed — see
+    # app.admin_auth.require_admin.
+    admin_user: str = "ops"
+    admin_password: str = ""
+
     @property
     def sqlalchemy_url(self) -> str:
         # Railway/Heroku provide postgresql:// or postgres://; async SQLAlchemy
