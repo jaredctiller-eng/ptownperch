@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 
 from icalendar import Calendar, Event
 
@@ -18,5 +18,6 @@ def build_calendar(entries: list[tuple[str, date, date]]) -> bytes:
         event.add("dtstart", start)
         event.add("dtend", end)
         event.add("summary", "Unavailable")
+        event.add("dtstamp", datetime.now(UTC))
         cal.add_component(event)
     return cal.to_ical()
