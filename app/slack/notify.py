@@ -10,25 +10,21 @@ logger = logging.getLogger(__name__)
 
 
 async def post_slack(text: str) -> None:
+    # Slack incoming-webhook URLs embed the secret token in the PATH
+    # (https://hooks.slack.com/services/T../B../XXXX), so only the host is
+    # safe to log. We check resp.is_error directly instead of
+    # resp.raise_for_status(): the latter constructs an httpx.HTTPStatusError
+    # whose message embeds the full URL, reachable via __context__ even from a
+    # `raise ... from None` wrapper. Never constructing that exception avoids
+    # the leak entirely rather than relying on suppressing its traceback.
     if not settings.slack_webhook_url:
         return
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.post(settings.slack_webhook_url, json={"text": text})
-        try:
-            resp.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            # Slack incoming-webhook URLs embed the secret token in the PATH
-            # (https://hooks.slack.com/services/T../B../XXXX), unlike the
-            # Airbnb ical URL where it's a query param — so unlike
-            # sync.run.fetch_ical, host+path here is still sensitive. Log the
-            # host only, and don't let the raw exception (whose message
-            # contains the full URL) reach callers' logger.exception via
-            # __context__ chaining.
+        if resp.is_error:
             safe_host = urlsplit(settings.slack_webhook_url).netloc
-            logger.error("slack post failed (%s): %s", exc.response.status_code, safe_host)
-            raise RuntimeError(
-                f"slack post failed ({exc.response.status_code}) to {safe_host}"
-            ) from None
+            logger.error("slack post failed (%s): %s", resp.status_code, safe_host)
+            raise RuntimeError(f"slack post failed ({resp.status_code}) to {safe_host}")
 
 
 def format_sync_messages(property_name: str, result: SyncResult) -> list[str]:

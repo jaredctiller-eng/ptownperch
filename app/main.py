@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
@@ -10,6 +11,12 @@ from app.db import SessionLocal, engine
 from app.models import Base
 from app.routes import admin, health, ical
 from app.sync.run import sync_all_properties
+
+# httpx logs each request at INFO, including the full URL — and the Airbnb
+# iCal / Slack webhook URLs both carry secret tokens. Pin this explicitly
+# rather than relying on nobody ever raising the app's log level or adding
+# --log-level to the Procfile.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 @asynccontextmanager
