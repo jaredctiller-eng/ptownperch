@@ -91,6 +91,43 @@ async def test_approve_rejects_when_now_overlapping(client, session, prop, monke
     assert inquiry.status == "inquiry"  # unchanged, not silently approved into a double-booking
 
 
+async def test_approve_locks_property_row_before_overlap_check(client, session, prop, monkeypatch):
+    # True row-lock concurrency isn't practically testable against SQLite —
+    # it doesn't enforce FOR UPDATE the way Postgres does, so two "concurrent"
+    # sessions in-process wouldn't actually block each other here. Instead
+    # this test verifies the structural fix: _approve must re-fetch the
+    # Property row through the shared locking helper (for_update=True)
+    # before calling assert_no_overlap, closing the TOCTOU window. Logical
+    # correctness of the overlap check itself is already covered by
+    # test_approve_rejects_when_now_overlapping.
+    monkeypatch.setattr(settings, "slack_signing_secret", "shh")
+    prop.nightly_rate_cents = 20000
+    res = Reservation(property_id=prop.id, source="direct", status="inquiry",
+                       guest_name="Alice", guest_email="alice@example.com",
+                       check_in=date(2026, 9, 1), check_out=date(2026, 9, 5))
+    session.add(res)
+    await session.flush()
+
+    import app.routes.slack_interactive as si_module
+
+    original = si_module._get_property_or_404
+    calls = []
+
+    async def spy(session_arg, slug, *, for_update=False):
+        calls.append(for_update)
+        return await original(session_arg, slug, for_update=for_update)
+
+    with (
+        patch("app.routes.slack_interactive._get_property_or_404", side_effect=spy),
+        patch("app.routes.slack_interactive.send_email"),
+    ):
+        resp = await _post_interaction(client, "booking_approve", res.id, "shh")
+
+    assert resp.status_code == 200
+    # Called exactly once, from inside _approve, with the lock requested.
+    assert calls == [True]
+
+
 async def test_decline_marks_canceled(client, session, prop, monkeypatch):
     monkeypatch.setattr(settings, "slack_signing_secret", "shh")
     res = Reservation(property_id=prop.id, source="direct", status="inquiry",

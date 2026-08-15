@@ -187,6 +187,22 @@ async def test_sign_already_signed_reservation_rejected(client, session, prop):
     assert resp.status_code == 409
 
 
+async def test_sign_rejects_canceled_hold(client, session, prop):
+    res = Reservation(property_id=prop.id, source="direct", status="canceled",
+                       guest_name="Alice", check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+                       booking_token="tok-canceled")
+    session.add(res)
+    await session.flush()
+
+    resp = await client.post(
+        "/book/tok-canceled/sign",
+        data={"signed_name": "Alice", "guest_home_address": "x", "occupant_names": "x",
+              "signature_image": "data:image/png;base64,x"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 409
+
+
 async def test_guest_page_refuses_to_render_while_template_has_blanks(client, session, prop):
     # This is the spec's hard safety stop: a guest must never be able to sign
     # a contract that still contains an operator-facing "[____]" placeholder.

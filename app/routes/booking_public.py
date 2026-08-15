@@ -181,6 +181,8 @@ async def book_guest_sign(
     session: AsyncSession = Depends(get_session),
 ):
     reservation = await _get_reservation_by_token_or_404(session, token)
+    if reservation.status != "hold":
+        raise HTTPException(status_code=409, detail="this hold is no longer active")
     if reservation.signed_at is not None:
         raise HTTPException(status_code=409, detail="already signed")
 

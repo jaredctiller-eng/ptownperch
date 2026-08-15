@@ -15,6 +15,7 @@ from app.config import settings
 from app.db import get_session
 from app.email.gmail import EmailSendError, send_email
 from app.models import Property, Reservation
+from app.routes.admin import _get_property_or_404
 from app.slack.blocks import (
     build_approved_blocks,
     build_declined_blocks,
@@ -85,6 +86,16 @@ async def slack_interactive(request: Request, session: AsyncSession = Depends(ge
 
 
 async def _approve(session: AsyncSession, reservation: Reservation, prop: Property) -> dict:
+    # Re-fetch the Property row WITH a lock before the overlap check. `prop`
+    # as passed in was read without a lock by the dispatcher above, which
+    # leaves a TOCTOU window: two Approve actions processed concurrently
+    # (two overlapping inquiries approved near-simultaneously, or a Slack
+    # redelivery — plausible here since this handler does a blocking-then-
+    # threaded SMTP send before responding) could both pass the overlap
+    # check and both commit. Reuse the same locking helper the admin routes
+    # use rather than duplicating the query; `prop.slug` is already loaded
+    # from the unlocked fetch, so no signature change is needed here.
+    prop = await _get_property_or_404(session, prop.slug, for_update=True)
     try:
         # Time has passed since the inquiry was created — re-check for a
         # conflict (another approval, a fresh Airbnb sync) before committing
