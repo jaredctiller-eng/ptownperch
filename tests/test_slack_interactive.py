@@ -118,5 +118,19 @@ async def test_unknown_action_id_returns_400(client, session, prop, monkeypatch)
 
 async def test_malformed_body_returns_401_not_500(client, monkeypatch):
     monkeypatch.setattr(settings, "slack_signing_secret", "shh")
-    resp = await client.post("/slack/interactive", content=b"\xff\xfe\x00not-utf8-and-unsigned")
+    resp = await client.post(
+        "/slack/interactive",
+        content=b"\xff\xfe\x00not-utf8",
+        headers={"X-Slack-Request-Timestamp": str(int(time.time())), "X-Slack-Signature": "v0=irrelevant"},
+    )
     assert resp.status_code == 401
+
+
+async def test_malformed_payload_shape_returns_400(client, monkeypatch):
+    monkeypatch.setattr(settings, "slack_signing_secret", "shh")
+    body = f"payload={json.dumps({'not_actions': []})}".encode()
+    resp = await client.post(
+        "/slack/interactive", content=body,
+        headers={**_signed_headers(body, "shh"), "content-type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 400

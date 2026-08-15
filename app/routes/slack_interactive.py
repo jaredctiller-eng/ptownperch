@@ -41,9 +41,12 @@ async def slack_interactive(request: Request, session: AsyncSession = Depends(ge
 
     form = dict(pair.split("=", 1) for pair in body.decode().split("&") if "=" in pair)
     payload = json.loads(unquote_plus(form.get("payload", "{}")))
-    action = payload["actions"][0]
-    action_id = action["action_id"]
-    reservation_id = int(action["value"])
+    try:
+        action = payload["actions"][0]
+        action_id = action["action_id"]
+        reservation_id = int(action["value"])
+    except (KeyError, IndexError, ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="malformed interaction payload") from None
 
     reservation = (
         await session.execute(select(Reservation).where(Reservation.id == reservation_id))
