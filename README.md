@@ -63,3 +63,11 @@ Every migration after that uses the normal `upgrade head`.
 the guest page refuses to render while any remain. Check
 `GET /admin/status`'s `contract_has_unresolved_blanks` field to verify
 before sharing a booking link.
+
+**Phase 1 setup (property + Airbnb connection), needed on a first-time
+deploy:** seed the property with `scripts.seed_property` (slug, name, and its
+Airbnb *export* calendar URL), then in Airbnb connect calendars both ways —
+import this service's outbound `https://<app-domain>/ical/{slug}.ics` feed,
+and export feeds the same URL you seeded. Do this before the Phase 2 steps
+above; the availability the guest booking page and iCal sync rely on depends
+on the property existing and both calendar directions being connected.
