@@ -2,7 +2,7 @@ from datetime import date
 
 from app.ical.parse import IcalEvent
 from app.slack.notify import format_sync_messages, post_slack
-from app.sync.engine import Collision, SyncResult
+from app.sync.engine import CanceledStay, Collision, SyncResult
 
 
 def test_formats_all_change_kinds():
@@ -17,7 +17,9 @@ def test_formats_all_change_kinds():
             IcalEvent(uid="c@airbnb.com", start=date(2026, 9, 10), end=date(2026, 9, 12),
                       summary="Reserved"),
         ],
-        canceled_uids=["gone@airbnb.com"],
+        canceled_stays=[
+            CanceledStay(uid="gone@airbnb.com", check_in=date(2026, 9, 20), check_out=date(2026, 9, 22)),
+        ],
         collisions=[Collision(airbnb_uid="n@airbnb.com", direct_reservation_id=7)],
     )
     msgs = format_sync_messages("Ptown Perch", result)
@@ -26,6 +28,7 @@ def test_formats_all_change_kinds():
     assert "New Airbnb block" in msgs[1]
     assert "dates changed" in msgs[2]
     assert "canceled" in msgs[3]
+    assert "2026-09-20" in msgs[3]
     assert "DOUBLE-BOOKING RISK" in msgs[4]
     assert "#7" in msgs[4]
 

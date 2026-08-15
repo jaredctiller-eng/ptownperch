@@ -22,8 +22,11 @@ def format_sync_messages(property_name: str, result: SyncResult) -> list[str]:
             f":calendar: Airbnb dates changed at *{property_name}*: "
             f"now {e.start} → {e.end} ({e.uid})"
         )
-    for uid in result.canceled_uids:
-        msgs.append(f":x: Airbnb event canceled at *{property_name}* ({uid})")
+    for stay in result.canceled_stays:
+        msgs.append(
+            f":x: Airbnb booking canceled at *{property_name}*: "
+            f"{stay.check_in} → {stay.check_out} ({stay.uid})"
+        )
     for c in result.collisions:
         msgs.append(
             f":rotating_light: *DOUBLE-BOOKING RISK* at {property_name}: Airbnb event "

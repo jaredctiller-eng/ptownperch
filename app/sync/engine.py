@@ -14,16 +14,25 @@ class Collision:
     direct_reservation_id: int
 
 
+@dataclass(frozen=True)
+class CanceledStay:
+    uid: str
+    check_in: date
+    check_out: date
+
+
 @dataclass
 class SyncResult:
     new_events: list[IcalEvent] = field(default_factory=list)
     changed_events: list[IcalEvent] = field(default_factory=list)
-    canceled_uids: list[str] = field(default_factory=list)
+    canceled_stays: list[CanceledStay] = field(default_factory=list)
     collisions: list[Collision] = field(default_factory=list)
 
     @property
     def has_changes(self) -> bool:
-        return bool(self.new_events or self.changed_events or self.canceled_uids or self.collisions)
+        return bool(
+            self.new_events or self.changed_events or self.canceled_stays or self.collisions
+        )
 
 
 def _overlaps(a_start: date, a_end: date, b_start: date, b_end: date) -> bool:
@@ -87,7 +96,9 @@ async def apply_airbnb_events(
     for uid, reservation in by_uid.items():
         if uid not in feed_uids and reservation.status != "canceled":
             reservation.status = "canceled"
-            result.canceled_uids.append(uid)
+            result.canceled_stays.append(
+                CanceledStay(uid, reservation.check_in, reservation.check_out)
+            )
 
     direct = (
         (

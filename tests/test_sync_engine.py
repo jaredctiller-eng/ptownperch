@@ -5,6 +5,7 @@ from sqlalchemy import select
 from app.ical.parse import IcalEvent
 from app.models import Reservation
 from app.sync.engine import apply_airbnb_events
+from app.sync.run import sync_property
 
 
 def ev(uid="a@airbnb.com", start=date(2026, 9, 1), end=date(2026, 9, 5), summary="Reserved"):
@@ -29,7 +30,8 @@ async def test_second_run_is_idempotent(session, prop):
 async def test_missing_uid_marks_canceled(session, prop):
     await apply_airbnb_events(session, prop.id, [ev()])
     result = await apply_airbnb_events(session, prop.id, [])
-    assert result.canceled_uids == ["a@airbnb.com"]
+    assert [s.uid for s in result.canceled_stays] == ["a@airbnb.com"]
+    assert result.canceled_stays[0].check_in == date(2026, 9, 1)
     stored = (await session.execute(select(Reservation))).scalar_one()
     assert stored.status == "canceled"
 
@@ -113,3 +115,33 @@ async def test_resurrection_with_new_dates_reports_once(session, prop):
     assert result.changed_events == []
     stored = (await session.execute(select(Reservation))).scalar_one()
     assert (stored.check_in, stored.check_out) == (date(2026, 9, 10), date(2026, 9, 14))
+
+
+async def test_sync_property_fetches_parses_applies(session, prop, monkeypatch):
+    ics = (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//EN\r\n"
+        "BEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20260901\r\nDTEND;VALUE=DATE:20260905\r\n"
+        "UID:r1@airbnb.com\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+
+    async def fake_fetch(url: str) -> str:
+        assert url == "https://airbnb.example/cal.ics"
+        return ics
+
+    prop.airbnb_ical_url = "https://airbnb.example/cal.ics"
+    sent = []
+
+    async def fake_post(text: str) -> None:
+        sent.append(text)
+
+    import app.sync.run as run_mod
+
+    monkeypatch.setattr(run_mod, "fetch_ical", fake_fetch)
+    monkeypatch.setattr(run_mod, "post_slack", fake_post)
+
+    await sync_property(session, prop)
+
+    stored = (await session.execute(select(Reservation).where(
+        Reservation.external_uid == "r1@airbnb.com"))).scalar_one()
+    assert stored.status == "confirmed"
+    assert len(sent) == 1 and "New Airbnb booking" in sent[0]
