@@ -25,6 +25,8 @@ def compute_quote(
     tax_enabled: bool,
     tax_rate_percent: float,
 ) -> Quote:
+    if check_out <= check_in:
+        raise ValueError("check_out must be after check_in")
     nights = (check_out - check_in).days
     subtotal_cents = nightly_rate_cents * nights
     discount_cents = round(subtotal_cents * DIRECT_BOOKING_DISCOUNT)

@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from app.booking.quote import compute_quote
 
 
@@ -35,3 +37,11 @@ def test_quote_rounds_to_nearest_cent():
     assert q.subtotal_cents == 999
     assert q.discount_cents == round(999 * 0.14)
     assert isinstance(q.total_cents, int)
+
+
+def test_rejects_non_positive_stay():
+    with pytest.raises(ValueError):
+        compute_quote(
+            nightly_rate_cents=10000, check_in=date(2026, 9, 5), check_out=date(2026, 9, 5),
+            tax_enabled=False, tax_rate_percent=14.45,
+        )
