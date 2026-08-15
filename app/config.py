@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     admin_user: str = "ops"
     admin_password: str = ""
     slack_signing_secret: str = ""
+    gmail_address: str = ""
+    gmail_app_password: str = ""
+    public_base_url: str = "http://localhost:8000"
 
     @property
     def sqlalchemy_url(self) -> str:
