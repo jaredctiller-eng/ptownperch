@@ -32,6 +32,10 @@ def test_parses_events_sorted_by_start():
     assert first.end == date(2026, 9, 5)  # exclusive checkout day
     assert first.summary == "Reserved"
     assert first.is_reservation is True
+    assert second.uid == "5f2b1c-blocked@airbnb.com"
+    assert second.start == date(2026, 10, 10)
+    assert second.end == date(2026, 10, 12)
+    assert second.summary == "Airbnb (Not available)"
     assert second.is_reservation is False
 
 
