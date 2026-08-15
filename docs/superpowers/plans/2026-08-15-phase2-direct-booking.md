@@ -2452,7 +2452,7 @@ Expected: PASS — 121 passed (116 prior + 5 new).
 
 ---
 
-### Task 14: Slack Mark Paid button
+### Task 13: Slack Mark Paid button
 
 **Files:**
 - Create: `app/booking/mark_paid.py`
@@ -2829,7 +2829,7 @@ Expected: PASS — 129 passed (121 prior + 3 mark_paid + 2 slack_blocks + 1 book
 
 ---
 
-### Task 15: README, env vars, and final verification
+### Task 14: README, env vars, and final verification
 
 **Files:**
 - Modify: `README.md`
