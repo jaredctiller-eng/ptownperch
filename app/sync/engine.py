@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ical.parse import IcalEvent
-from app.models import Reservation
+from app.models import DIRECT_BLOCKING_STATUSES, Reservation
 
 
 @dataclass(frozen=True)
@@ -50,8 +50,12 @@ async def apply_airbnb_events(
     )
     by_uid = {r.external_uid: r for r in existing}
     feed_uids = {e.uid for e in events}
+    processed: set[str] = set()
 
     for event in events:
+        if event.uid in processed:
+            continue  # malformed feed: duplicate UID, first occurrence wins
+        processed.add(event.uid)
         if event.uid in by_uid:
             reservation = by_uid[event.uid]
             if reservation.status == "canceled":
@@ -91,7 +95,7 @@ async def apply_airbnb_events(
                 select(Reservation).where(
                     Reservation.property_id == property_id,
                     Reservation.source == "direct",
-                    Reservation.status.in_(("hold", "confirmed")),
+                    Reservation.status.in_(DIRECT_BLOCKING_STATUSES),
                 )
             )
         )
@@ -99,6 +103,8 @@ async def apply_airbnb_events(
         .all()
     )
     for event in events:
+        if not event.is_reservation:
+            continue  # Airbnb blocks can legitimately mirror our own direct bookings
         for d in direct:
             if _overlaps(event.start, event.end, d.check_in, d.check_out):
                 result.collisions.append(Collision(event.uid, d.id))

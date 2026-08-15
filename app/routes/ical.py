@@ -4,11 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.ical.generate import build_calendar
-from app.models import CalendarBlock, Property, Reservation
+from app.models import DIRECT_BLOCKING_STATUSES, CalendarBlock, Property, Reservation
 
 router = APIRouter()
-
-BLOCKING_STATUSES = ("hold", "confirmed")
 
 
 @router.get("/ical/{slug}.ics")
@@ -26,7 +24,7 @@ async def property_ical(slug: str, session: AsyncSession = Depends(get_session))
                 .where(
                     Reservation.property_id == prop.id,
                     Reservation.source == "direct",
-                    Reservation.status.in_(BLOCKING_STATUSES),
+                    Reservation.status.in_(DIRECT_BLOCKING_STATUSES),
                 )
                 .order_by(Reservation.check_in)
             )

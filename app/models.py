@@ -26,6 +26,9 @@ class Property(Base):
     airbnb_ical_url: Mapped[str] = mapped_column(String(512), default="")
 
 
+DIRECT_BLOCKING_STATUSES = ("hold", "confirmed")
+
+
 class Reservation(Base):
     __tablename__ = "reservations"
     __table_args__ = (

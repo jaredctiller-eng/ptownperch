@@ -82,3 +82,34 @@ async def test_already_canceled_uid_not_reported_again(session, prop):
     await apply_airbnb_events(session, prop.id, [])
     result = await apply_airbnb_events(session, prop.id, [])  # still absent
     assert result.has_changes is False
+
+
+async def test_airbnb_block_does_not_collide_with_direct(session, prop):
+    # Airbnb "Not available" blocks mirror our own outbound feed; not a double-booking.
+    direct = Reservation(
+        property_id=prop.id, source="direct", status="confirmed",
+        check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+    )
+    session.add(direct)
+    await session.flush()
+    block = ev(uid="mirror@airbnb.com", summary="Airbnb (Not available)")
+    result = await apply_airbnb_events(session, prop.id, [block])
+    assert result.collisions == []
+
+
+async def test_duplicate_uids_in_feed_do_not_crash(session, prop):
+    result = await apply_airbnb_events(session, prop.id, [ev(), ev()])
+    assert [e.uid for e in result.new_events] == ["a@airbnb.com"]
+    stored = (await session.execute(select(Reservation))).scalars().all()
+    assert len(stored) == 1
+
+
+async def test_resurrection_with_new_dates_reports_once(session, prop):
+    await apply_airbnb_events(session, prop.id, [ev()])
+    await apply_airbnb_events(session, prop.id, [])
+    moved = ev(start=date(2026, 9, 10), end=date(2026, 9, 14))
+    result = await apply_airbnb_events(session, prop.id, [moved])
+    assert [e.uid for e in result.new_events] == ["a@airbnb.com"]
+    assert result.changed_events == []
+    stored = (await session.execute(select(Reservation))).scalar_one()
+    assert (stored.check_in, stored.check_out) == (date(2026, 9, 10), date(2026, 9, 14))
