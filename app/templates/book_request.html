@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Book Ptown Perch Direct</title></head>
+<body style="font-family: sans-serif; max-width: 480px; margin: 2rem auto;">
+  <h1>Request to Book — Ptown Perch</h1>
+  <p>Booking direct saves you the platform fee. We'll review and get back to you shortly.</p>
+  <form method="post" action="/book">
+    <p><label>Check-in <input type="date" name="check_in" required></label></p>
+    <p><label>Check-out <input type="date" name="check_out" required></label></p>
+    <p><label>Name <input type="text" name="guest_name" required></label></p>
+    <p><label>Email <input type="email" name="guest_email" required></label></p>
+    <p><label>Phone <input type="tel" name="guest_phone"></label></p>
+    <input type="text" name="honeypot" style="display:none" tabindex="-1" autocomplete="off">
+    <p><button type="submit">Request to Book</button></p>
+  </form>
+</body>
+</html>

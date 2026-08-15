@@ -27,6 +27,17 @@ async def post_slack(text: str) -> None:
             raise RuntimeError(f"slack post failed ({resp.status_code}) to {safe_host}")
 
 
+async def post_slack_blocks(payload: dict) -> None:
+    if not settings.slack_webhook_url:
+        return
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(settings.slack_webhook_url, json=payload)
+        if resp.is_error:
+            safe_host = urlsplit(settings.slack_webhook_url).netloc
+            logger.error("slack blocks post failed (%s): %s", resp.status_code, safe_host)
+            raise RuntimeError(f"slack post failed ({resp.status_code}) to {safe_host}")
+
+
 def format_sync_messages(property_name: str, result: SyncResult) -> list[str]:
     msgs = []
     for e in result.new_events:

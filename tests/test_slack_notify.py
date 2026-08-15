@@ -45,3 +45,10 @@ async def test_post_slack_noop_without_webhook(monkeypatch):
 
     monkeypatch.setattr(settings, "slack_webhook_url", "")
     await post_slack("hello")
+
+
+async def test_post_slack_blocks_noop_without_webhook(monkeypatch):
+    from app.config import settings
+    from app.slack.notify import post_slack_blocks
+    monkeypatch.setattr(settings, "slack_webhook_url", "")
+    await post_slack_blocks({"blocks": []})

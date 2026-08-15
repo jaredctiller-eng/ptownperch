@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from app.bootstrap import upsert_configured_property
 from app.config import settings
 from app.db import SessionLocal
-from app.routes import admin, health, ical
+from app.routes import admin, booking_public, health, ical
 from app.sync.run import sync_all_properties
 
 # httpx logs each request at INFO, including the full URL — and the Airbnb
@@ -42,3 +42,4 @@ app = FastAPI(title="Ptown Perch Ops", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(ical.router)
 app.include_router(admin.router)
+app.include_router(booking_public.router)
