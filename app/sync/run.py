@@ -3,6 +3,7 @@ import logging
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import SessionLocal
 from app.ical.parse import parse_airbnb_ical
@@ -20,13 +21,16 @@ async def fetch_ical(url: str) -> str:
         return resp.text
 
 
-async def sync_property(session, prop: Property) -> None:
+async def sync_property(session: AsyncSession, prop: Property) -> None:
     text = await fetch_ical(prop.airbnb_ical_url)
     events = parse_airbnb_ical(text)
     result = await apply_airbnb_events(session, prop.id, events)
     await session.commit()
     for msg in format_sync_messages(prop.name, result):
-        await post_slack(msg)
+        try:
+            await post_slack(msg)
+        except Exception:
+            logger.exception("slack post failed for property %s", prop.slug)
 
 
 async def sync_all_properties() -> None:

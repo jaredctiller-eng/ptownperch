@@ -145,3 +145,33 @@ async def test_sync_property_fetches_parses_applies(session, prop, monkeypatch):
         Reservation.external_uid == "r1@airbnb.com"))).scalar_one()
     assert stored.status == "confirmed"
     assert len(sent) == 1 and "New Airbnb booking" in sent[0]
+
+
+async def test_sync_property_slack_failure_does_not_drop_batch(session, prop, monkeypatch):
+    ics = (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//EN\r\n"
+        "BEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20260901\r\nDTEND;VALUE=DATE:20260905\r\n"
+        "UID:r1@airbnb.com\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\n"
+        "BEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20261001\r\nDTEND;VALUE=DATE:20261003\r\n"
+        "UID:r2@airbnb.com\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+
+    async def fake_fetch(url: str) -> str:
+        return ics
+
+    calls = []
+
+    async def flaky_post(text: str) -> None:
+        calls.append(text)
+        if len(calls) == 1:
+            raise RuntimeError("slack down")
+
+    import app.sync.run as run_mod
+
+    prop.airbnb_ical_url = "https://airbnb.example/cal.ics"
+    monkeypatch.setattr(run_mod, "fetch_ical", fake_fetch)
+    monkeypatch.setattr(run_mod, "post_slack", flaky_post)
+
+    await sync_property(session, prop)  # must not raise
+
+    assert len(calls) == 2  # second message still attempted
