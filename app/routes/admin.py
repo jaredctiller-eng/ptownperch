@@ -7,11 +7,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin_auth import require_admin
+from app.booking.availability import assert_no_overlap
 from app.config import settings
 from app.db import get_session
 from app.models import DIRECT_BLOCKING_STATUSES, Property, Reservation
 from app.slack.notify import post_slack
-from app.sync.engine import _overlaps
 
 logger = logging.getLogger(__name__)
 
@@ -61,25 +61,6 @@ async def _get_property_or_404(
     return prop
 
 
-async def _blocking_reservations(session: AsyncSession, property_id: int) -> list[Reservation]:
-    return (
-        (
-            await session.execute(
-                select(Reservation).where(
-                    Reservation.property_id == property_id,
-                    (
-                        (Reservation.source == "direct")
-                        & Reservation.status.in_(DIRECT_BLOCKING_STATUSES)
-                    )
-                    | ((Reservation.source == "airbnb_ical") & (Reservation.status != "canceled")),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-
-
 @router.post("/reservations", status_code=201, response_model=ReservationOut)
 async def create_reservation(
     payload: ReservationCreate, session: AsyncSession = Depends(get_session)
@@ -96,15 +77,7 @@ async def create_reservation(
         )
 
     if payload.status in DIRECT_BLOCKING_STATUSES:
-        for existing in await _blocking_reservations(session, prop.id):
-            if _overlaps(payload.check_in, payload.check_out, existing.check_in, existing.check_out):
-                raise HTTPException(
-                    status_code=409,
-                    detail=(
-                        f"overlaps existing {existing.source} reservation "
-                        f"#{existing.id} ({existing.check_in} → {existing.check_out})"
-                    ),
-                )
+        await assert_no_overlap(session, prop.id, payload.check_in, payload.check_out)
 
     reservation = Reservation(
         property_id=prop.id,
