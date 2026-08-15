@@ -37,6 +37,11 @@ async def test_ical_includes_direct_holds_and_blocks_only(client, session, prop)
         (date(2026, 9, 10), date(2026, 9, 12)),
         (date(2026, 11, 1), date(2026, 11, 3)),
     ]
+    assert [e.uid for e in events] == [
+        "res-1@ptownperch",
+        "res-2@ptownperch",
+        "block-1@ptownperch",
+    ]
 
 
 async def test_unknown_slug_404(client):
