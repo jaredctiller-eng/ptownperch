@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin_auth import require_admin
 from app.booking.availability import assert_no_overlap
+from app.booking.contract import has_unresolved_blanks
 from app.config import settings
 from app.db import get_session
 from app.models import DIRECT_BLOCKING_STATUSES, Property, Reservation
@@ -194,3 +195,95 @@ async def admin_status(
         "earliest_check_in": span_row[0],
         "latest_check_in": span_row[1],
     }
+
+
+class ConfigUpdate(BaseModel):
+    nightly_rate_cents: int | None = None
+    direct_booking_tax_enabled: bool | None = None
+    direct_booking_tax_rate_percent: float | None = None
+
+
+class ConfigOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    nightly_rate_cents: int | None
+    direct_booking_tax_enabled: bool
+    direct_booking_tax_rate_percent: float
+
+
+@router.patch("/config", response_model=ConfigOut)
+async def update_config(
+    payload: ConfigUpdate,
+    property_slug: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    slug = property_slug or settings.property_slug
+    prop = await _get_property_or_404(session, slug)
+
+    if payload.nightly_rate_cents is not None:
+        prop.nightly_rate_cents = payload.nightly_rate_cents
+    if payload.direct_booking_tax_enabled is not None:
+        prop.direct_booking_tax_enabled = payload.direct_booking_tax_enabled
+    if payload.direct_booking_tax_rate_percent is not None:
+        prop.direct_booking_tax_rate_percent = payload.direct_booking_tax_rate_percent
+
+    await session.commit()
+    await session.refresh(prop)
+    return prop
+
+
+class ContractTemplateUpdate(BaseModel):
+    template: str
+
+
+@router.put("/contract-template")
+async def update_contract_template(
+    payload: ContractTemplateUpdate,
+    property_slug: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    slug = property_slug or settings.property_slug
+    prop = await _get_property_or_404(session, slug)
+    prop.contract_template = payload.template
+    await session.commit()
+    return {"has_unresolved_blanks": has_unresolved_blanks(payload.template)}
+
+
+@router.post("/reservations/{reservation_id}/mark-paid", response_model=ReservationOut)
+async def mark_paid(
+    reservation_id: int,
+    property_slug: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    slug = property_slug or settings.property_slug
+    prop = await _get_property_or_404(session, slug)
+
+    reservation = (
+        await session.execute(
+            select(Reservation).where(
+                Reservation.id == reservation_id,
+                Reservation.property_id == prop.id,
+                Reservation.source == "direct",
+            )
+        )
+    ).scalar_one_or_none()
+    if reservation is None:
+        raise HTTPException(status_code=404, detail="unknown reservation")
+    if reservation.status != "hold":
+        raise HTTPException(status_code=422, detail="reservation is not in hold status")
+    if reservation.signed_at is None:
+        raise HTTPException(status_code=422, detail="reservation has no signed contract on file")
+
+    reservation.status = "confirmed"
+    await session.commit()
+    await session.refresh(reservation)
+
+    try:
+        await post_slack(
+            f":moneybag: Marked paid & confirmed at *{prop.name}*: {reservation.guest_name} "
+            f"{reservation.check_in} → {reservation.check_out} (#{reservation.id})"
+        )
+    except Exception:
+        logger.exception("slack post failed for mark-paid #%s", reservation.id)
+
+    return reservation
