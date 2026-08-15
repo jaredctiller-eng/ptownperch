@@ -1,11 +1,19 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, ForeignKey, MetaData, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(
+        naming_convention={
+            "ix": "ix_%(column_0_label)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_%(constraint_name)s",
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+    )
 
 
 class Property(Base):
@@ -20,7 +28,10 @@ class Property(Base):
 
 class Reservation(Base):
     __tablename__ = "reservations"
-    __table_args__ = (UniqueConstraint("property_id", "external_uid"),)
+    __table_args__ = (
+        UniqueConstraint("property_id", "external_uid"),
+        CheckConstraint("check_out > check_in", name="valid_date_range"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.id"))
@@ -36,6 +47,7 @@ class Reservation(Base):
 
 class CalendarBlock(Base):
     __tablename__ = "calendar_blocks"
+    __table_args__ = (CheckConstraint("end_date > start_date", name="valid_date_range"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.id"))
