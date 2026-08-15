@@ -47,3 +47,23 @@ async def test_ical_includes_direct_holds_and_blocks_only(client, session, prop)
 async def test_unknown_slug_404(client):
     resp = await client.get("/ical/nope.ics")
     assert resp.status_code == 404
+
+
+async def test_empty_property_feed_has_anchor_event(client, session, prop):
+    # Airbnb rejects event-less feeds, so a property with nothing booked still
+    # publishes a past anchor event.
+    resp = await client.get("/ical/perch.ics")
+    assert resp.status_code == 200
+    events = parse_airbnb_ical(resp.text)
+    assert [(e.start, e.end) for e in events] == [(date(2020, 1, 1), date(2020, 1, 2))]
+    assert b"CALSCALE:GREGORIAN" in resp.content
+
+
+async def test_anchor_absent_once_real_entries_exist(client, session, prop):
+    session.add(
+        Reservation(property_id=prop.id, source="direct", status="confirmed",
+                    check_in=date(2026, 9, 1), check_out=date(2026, 9, 5))
+    )
+    await session.flush()
+    events = parse_airbnb_ical((await client.get("/ical/perch.ics")).text)
+    assert [(e.start, e.end) for e in events] == [(date(2026, 9, 1), date(2026, 9, 5))]

@@ -12,6 +12,8 @@ def build_calendar(entries: list[tuple[str, date, date]]) -> bytes:
     cal = Calendar()
     cal.add("prodid", "-//Ptown Perch Ops//EN")
     cal.add("version", "2.0")
+    cal.add("calscale", "GREGORIAN")
+    cal.add("method", "PUBLISH")
     for uid, start, end in entries:
         event = Event()
         event.add("uid", uid)
