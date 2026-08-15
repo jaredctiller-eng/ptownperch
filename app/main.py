@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 
+from app.booking.hold_expiry import expire_stale_holds_all_properties
 from app.bootstrap import upsert_configured_property
 from app.config import settings
 from app.db import SessionLocal
@@ -32,7 +33,11 @@ async def lifespan(app: FastAPI):
             # would otherwise reset the clock and could postpone syncing forever.
             next_run_time=datetime.now(UTC),
         )
-        scheduler.start()
+    scheduler.add_job(
+        expire_stale_holds_all_properties, "interval", minutes=15,
+        next_run_time=datetime.now(UTC),
+    )
+    scheduler.start()
     yield
     if scheduler.running:
         scheduler.shutdown(wait=False)

@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     gmail_address: str = ""
     gmail_app_password: str = ""
     public_base_url: str = "http://localhost:8000"
+    hold_expiry_hours: int = 48
+    hold_warning_hours: int = 36
 
     @property
     def sqlalchemy_url(self) -> str:
