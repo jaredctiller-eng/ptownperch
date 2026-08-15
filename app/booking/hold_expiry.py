@@ -35,18 +35,24 @@ async def expire_stale_holds(session: AsyncSession) -> None:
         created_at = _as_aware(res.created_at)
         if created_at <= expire_cutoff:
             res.status = "canceled"
-            await post_slack(
-                f":alarm_clock: Hold expired and released: {res.guest_name} "
-                f"{res.check_in} → {res.check_out} (#{res.id})"
-            )
+            await session.commit()
+            try:
+                await post_slack(
+                    f":alarm_clock: Hold expired and released: {res.guest_name} "
+                    f"{res.check_in} → {res.check_out} (#{res.id})"
+                )
+            except Exception:
+                logger.exception("slack post failed for expired hold #%s", res.id)
         elif created_at <= warn_cutoff and res.hold_warned_at is None:
             res.hold_warned_at = now
-            await post_slack(
-                f":hourglass_flowing_sand: Hold will expire soon unless paid: "
-                f"{res.guest_name} {res.check_in} → {res.check_out} (#{res.id})"
-            )
-
-    await session.commit()
+            await session.commit()
+            try:
+                await post_slack(
+                    f":hourglass_flowing_sand: Hold will expire soon unless paid: "
+                    f"{res.guest_name} {res.check_in} → {res.check_out} (#{res.id})"
+                )
+            except Exception:
+                logger.exception("slack post failed for hold warning #%s", res.id)
 
 
 async def expire_stale_holds_all_properties() -> None:

@@ -98,3 +98,28 @@ async def test_confirmed_reservation_never_touched(session, prop, monkeypatch):
     await expire_stale_holds(session)
     await session.refresh(res)
     assert res.status == "confirmed"
+
+
+async def test_slack_failure_on_one_hold_does_not_block_others(session, prop, monkeypatch):
+    calls = []
+
+    async def flaky_post_slack(text):
+        calls.append(text)
+        if len(calls) == 1:
+            raise RuntimeError("slack down")
+
+    monkeypatch.setattr("app.booking.hold_expiry.post_slack", flaky_post_slack)
+    res1 = _hold(prop, hours_old=settings.hold_expiry_hours + 1,
+                 hold_warned_at=datetime.now(UTC) - timedelta(hours=13))
+    res2 = _hold(prop, hours_old=settings.hold_expiry_hours + 1,
+                 hold_warned_at=datetime.now(UTC) - timedelta(hours=13))
+    session.add_all([res1, res2])
+    await session.flush()
+
+    await expire_stale_holds(session)  # must not raise
+
+    await session.refresh(res1)
+    await session.refresh(res2)
+    assert res1.status == "canceled"
+    assert res2.status == "canceled"  # second hold still processed despite first's Slack failure
+    assert len(calls) == 2
