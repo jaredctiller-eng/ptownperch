@@ -53,7 +53,12 @@ async def slack_interactive(request: Request, session: AsyncSession = Depends(ge
         raise HTTPException(status_code=400, detail="malformed interaction payload") from None
 
     reservation = (
-        await session.execute(select(Reservation).where(Reservation.id == reservation_id))
+        await session.execute(
+            select(Reservation).where(
+                Reservation.id == reservation_id,
+                Reservation.source == "direct",
+            )
+        )
     ).scalar_one_or_none()
     if reservation is None:
         raise HTTPException(status_code=404, detail="unknown reservation")

@@ -2,6 +2,7 @@ from datetime import date
 
 from app.booking.quote import compute_quote
 from app.slack.blocks import (
+    _money,
     build_declined_blocks,
     build_inquiry_blocks,
     build_mark_paid_confirmed_blocks,
@@ -42,11 +43,12 @@ def test_overlap_error_blocks_include_message():
 
 def test_signed_blocks_have_mark_paid_button():
     payload = build_signed_blocks(
-        property_name="Ptown Perch", guest_name="Alice", reservation_id=9, total="$688.00"
+        property_name="Ptown Perch", guest_name="Alice", reservation_id=9, total_cents=68800
     )
     actions = payload["blocks"][-1]["elements"]
     assert actions[0]["action_id"] == "booking_mark_paid"
     assert actions[0]["value"] == "9"
+    assert _money(68800) in payload["blocks"][0]["text"]["text"]
 
 
 def test_mark_paid_confirmed_and_error_blocks():

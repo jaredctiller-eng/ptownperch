@@ -213,12 +213,19 @@ async def book_guest_sign(
     await session.commit()
 
     try:
+        quote = compute_quote(
+            nightly_rate_cents=prop.nightly_rate_cents or 0,
+            check_in=reservation.check_in,
+            check_out=reservation.check_out,
+            tax_enabled=prop.direct_booking_tax_enabled,
+            tax_rate_percent=prop.direct_booking_tax_rate_percent,
+        )
         await post_slack_blocks(
             build_signed_blocks(
                 property_name=prop.name,
                 guest_name=reservation.guest_name or "guest",
                 reservation_id=reservation.id,
-                total=_quote_context(prop, reservation)["total"],
+                total_cents=quote.total_cents,
             )
         )
     except Exception:

@@ -103,7 +103,7 @@ def build_overlap_error_blocks(message: str) -> dict:
     }
 
 
-def build_signed_blocks(*, property_name: str, guest_name: str, reservation_id: int, total: str) -> dict:
+def build_signed_blocks(*, property_name: str, guest_name: str, reservation_id: int, total_cents: int) -> dict:
     return {
         "text": f"{guest_name} signed the agreement at {property_name}",
         "blocks": [
@@ -113,7 +113,7 @@ def build_signed_blocks(*, property_name: str, guest_name: str, reservation_id: 
                     "type": "mrkdwn",
                     "text": (
                         f":pencil2: *{guest_name} signed the rental agreement* at {property_name}\n"
-                        f"Total due: {total}. Tap Mark Paid once you see the Venmo/Zelle payment land."
+                        f"Total due: {_money(total_cents)}. Tap Mark Paid once you see the Venmo/Zelle payment land."
                     ),
                 },
             },
