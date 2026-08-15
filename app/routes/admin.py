@@ -2,7 +2,7 @@ import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,9 +23,9 @@ CREATABLE_STATUSES = ("inquiry", "hold", "confirmed")
 class ReservationCreate(BaseModel):
     check_in: date
     check_out: date
-    guest_name: str
-    guest_email: str | None = None
-    guest_phone: str | None = None
+    guest_name: str = Field(max_length=128)
+    guest_email: str | None = Field(default=None, max_length=255)
+    guest_phone: str | None = Field(default=None, max_length=32)
     status: str = "confirmed"
     property_slug: str | None = None
 
@@ -44,12 +44,20 @@ class ReservationOut(BaseModel):
     check_out: date
 
 
-async def _get_property_or_404(session: AsyncSession, slug: str) -> Property:
-    prop = (
-        await session.execute(select(Property).where(Property.slug == slug))
-    ).scalar_one_or_none()
+async def _get_property_or_404(
+    session: AsyncSession, slug: str, *, for_update: bool = False
+) -> Property:
+    query = select(Property).where(Property.slug == slug)
+    if for_update:
+        # Row lock so two concurrent creates for the same property serialize
+        # around the overlap check below instead of both reading a
+        # pre-insert state and both passing (TOCTOU). Only takes effect on
+        # Postgres; SQLite ignores FOR UPDATE.
+        query = query.with_for_update()
+    prop = (await session.execute(query)).scalar_one_or_none()
     if prop is None:
-        raise HTTPException(status_code=404, detail=f"unknown property: {slug}")
+        # Don't echo the caller-supplied slug back into the error body.
+        raise HTTPException(status_code=404, detail="unknown property")
     return prop
 
 
@@ -77,7 +85,7 @@ async def create_reservation(
     payload: ReservationCreate, session: AsyncSession = Depends(get_session)
 ):
     slug = payload.property_slug or settings.property_slug
-    prop = await _get_property_or_404(session, slug)
+    prop = await _get_property_or_404(session, slug, for_update=True)
 
     if payload.check_out <= payload.check_in:
         raise HTTPException(status_code=422, detail="check_out must be after check_in")
@@ -144,8 +152,31 @@ async def list_reservations(
 
 
 @router.post("/reservations/{reservation_id}/cancel", response_model=ReservationOut)
-async def cancel_reservation(reservation_id: int, session: AsyncSession = Depends(get_session)):
-    reservation = await session.get(Reservation, reservation_id)
+async def cancel_reservation(
+    reservation_id: int,
+    property_slug: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    slug = property_slug or settings.property_slug
+    prop = await _get_property_or_404(session, slug)
+
+    # Scoped to source="direct" and this property: an airbnb_ical-sourced row
+    # must never be cancellable here. Canceling one would free its dates on
+    # the outbound feed, and the next inbound sync's resurrection logic
+    # (app.sync.engine.apply_airbnb_events) would flip it back to confirmed
+    # as soon as Airbnb's feed still lists it — a guaranteed double booking
+    # in the gap between those two events. 404 rather than 403 so a caller
+    # guessing ids can't distinguish "doesn't exist" from "exists but is an
+    # airbnb-sourced/other-property row".
+    reservation = (
+        await session.execute(
+            select(Reservation).where(
+                Reservation.id == reservation_id,
+                Reservation.property_id == prop.id,
+                Reservation.source == "direct",
+            )
+        )
+    ).scalar_one_or_none()
     if reservation is None:
         raise HTTPException(status_code=404, detail="unknown reservation")
     reservation.status = "canceled"

@@ -6,7 +6,7 @@ from sqlalchemy import select
 import app.routes.admin as admin_mod
 from app.config import settings
 from app.ical.parse import parse_airbnb_ical
-from app.models import Reservation
+from app.models import Property, Reservation
 
 AUTH = ("ops", "secret")
 
@@ -81,6 +81,17 @@ async def test_create_unknown_property_slug_404(client, prop):
     assert resp.status_code == 404
 
 
+async def test_404_body_does_not_reflect_submitted_slug(client, prop):
+    # The 404 detail must not echo attacker-supplied input back verbatim.
+    resp = await client.post(
+        "/admin/reservations",
+        json=payload(property_slug="a-slug-that-does-not-exist-xyz"),
+        auth=AUTH,
+    )
+    assert resp.status_code == 404
+    assert "a-slug-that-does-not-exist-xyz" not in resp.text
+
+
 async def test_created_booking_appears_in_outbound_ical(client, session, prop):
     resp = await client.post("/admin/reservations", json=payload(), auth=AUTH)
     assert resp.status_code == 201
@@ -116,6 +127,22 @@ async def test_422_bogus_status(client, prop):
         "/admin/reservations", json=payload(status="bogus"), auth=AUTH
     )
     assert resp.status_code == 422
+
+
+async def test_422_guest_name_too_long(client, prop):
+    # Must be rejected by pydantic, not reach Postgres and 500 with
+    # StringDataRightTruncationError (the column is VARCHAR(128)).
+    resp = await client.post(
+        "/admin/reservations", json=payload(guest_name="x" * 129), auth=AUTH
+    )
+    assert resp.status_code == 422
+
+
+async def test_guest_name_at_max_length_is_accepted(client, prop):
+    resp = await client.post(
+        "/admin/reservations", json=payload(guest_name="x" * 128), auth=AUTH
+    )
+    assert resp.status_code == 201
 
 
 # --- create: overlap conflicts ---
@@ -277,6 +304,48 @@ async def test_cancel_flips_status_and_removes_from_feed(client, session, prop):
 async def test_cancel_unknown_id_404(client, prop):
     resp = await client.post("/admin/reservations/999999/cancel", auth=AUTH)
     assert resp.status_code == 404
+
+
+async def test_cancel_rejects_airbnb_sourced_row(client, session, prop):
+    # Canceling an airbnb_ical row here would free its dates on the outbound
+    # feed while Airbnb still has it booked; the next inbound sync's
+    # resurrection logic would then flip it back to confirmed, guaranteeing
+    # a double booking in the gap. Must 404, not succeed.
+    airbnb_res = Reservation(
+        property_id=prop.id, source="airbnb_ical", status="confirmed",
+        external_uid="real@airbnb.com",
+        check_in=date(2026, 8, 28), check_out=date(2026, 9, 7),
+    )
+    session.add(airbnb_res)
+    await session.flush()
+
+    resp = await client.post(f"/admin/reservations/{airbnb_res.id}/cancel", auth=AUTH)
+    assert resp.status_code == 404
+
+    stored = await session.get(Reservation, airbnb_res.id)
+    await session.refresh(stored)
+    assert stored.status == "confirmed"  # untouched
+
+
+async def test_cancel_rejects_wrong_property(client, session, prop):
+    other = Property(slug="other-house", name="Other House")
+    session.add(other)
+    await session.flush()
+    other_res = Reservation(
+        property_id=other.id, source="direct", status="confirmed",
+        guest_name="Someone Else",
+        check_in=date(2026, 8, 28), check_out=date(2026, 9, 7),
+    )
+    session.add(other_res)
+    await session.flush()
+
+    # default property_slug ("perch") doesn't own this reservation.
+    resp = await client.post(f"/admin/reservations/{other_res.id}/cancel", auth=AUTH)
+    assert resp.status_code == 404
+
+    stored = await session.get(Reservation, other_res.id)
+    await session.refresh(stored)
+    assert stored.status == "confirmed"  # untouched
 
 
 # --- status ---

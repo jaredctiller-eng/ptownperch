@@ -1,7 +1,12 @@
+import logging
+from urllib.parse import urlsplit
+
 import httpx
 
 from app.config import settings
 from app.sync.engine import SyncResult
+
+logger = logging.getLogger(__name__)
 
 
 async def post_slack(text: str) -> None:
@@ -9,7 +14,21 @@ async def post_slack(text: str) -> None:
         return
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.post(settings.slack_webhook_url, json={"text": text})
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            # Slack incoming-webhook URLs embed the secret token in the PATH
+            # (https://hooks.slack.com/services/T../B../XXXX), unlike the
+            # Airbnb ical URL where it's a query param — so unlike
+            # sync.run.fetch_ical, host+path here is still sensitive. Log the
+            # host only, and don't let the raw exception (whose message
+            # contains the full URL) reach callers' logger.exception via
+            # __context__ chaining.
+            safe_host = urlsplit(settings.slack_webhook_url).netloc
+            logger.error("slack post failed (%s): %s", exc.response.status_code, safe_host)
+            raise RuntimeError(
+                f"slack post failed ({exc.response.status_code}) to {safe_host}"
+            ) from None
 
 
 def format_sync_messages(property_name: str, result: SyncResult) -> list[str]:
