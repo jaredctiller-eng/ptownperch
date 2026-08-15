@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     # app.admin_auth.require_admin.
     admin_user: str = "ops"
     admin_password: str = ""
+    slack_signing_secret: str = ""
 
     @property
     def sqlalchemy_url(self) -> str:
