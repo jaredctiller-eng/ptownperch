@@ -229,6 +229,34 @@ async def test_already_signed_page_still_renders_even_if_template_later_gains_bl
     assert b"frozen at signing" in resp.content
 
 
+async def test_sign_posts_slack_notification_with_mark_paid_button(client, session, prop, monkeypatch):
+    prop.contract_template = "Guest: {{guest_name}}, Total: {{total}}"
+    prop.nightly_rate_cents = 20000
+    res = Reservation(property_id=prop.id, source="direct", status="hold",
+                       guest_name="Alice", check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+                       booking_token="tok-notify")
+    session.add(res)
+    await session.flush()
+
+    sent = []
+
+    async def fake_post_blocks(payload):
+        sent.append(payload)
+
+    monkeypatch.setattr("app.routes.booking_public.post_slack_blocks", fake_post_blocks)
+
+    resp = await client.post(
+        "/book/tok-notify/sign",
+        data={"signed_name": "Alice Guest", "guest_home_address": "1 Main St",
+              "occupant_names": "Alice", "signature_image": "data:image/png;base64,abc"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert len(sent) == 1
+    actions = sent[0]["blocks"][-1]["elements"]
+    assert actions[0]["action_id"] == "booking_mark_paid"
+
+
 async def test_guest_page_undefined_template_variable_returns_503_not_500(client, session, prop):
     # render_contract raises jinja2.UndefinedError if the template references
     # a key not provided — this is an operator template bug, and it must

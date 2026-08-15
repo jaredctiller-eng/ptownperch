@@ -8,6 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.booking.availability import assert_no_overlap
+from app.booking.mark_paid import MarkPaidError
+from app.booking.mark_paid import mark_paid as apply_mark_paid
 from app.booking.tokens import generate_booking_token
 from app.config import settings
 from app.db import get_session
@@ -16,6 +18,8 @@ from app.models import Property, Reservation
 from app.slack.blocks import (
     build_approved_blocks,
     build_declined_blocks,
+    build_mark_paid_confirmed_blocks,
+    build_mark_paid_error_blocks,
     build_overlap_error_blocks,
 )
 from app.slack.verify import SlackVerificationError, verify_slack_signature
@@ -63,6 +67,14 @@ async def slack_interactive(request: Request, session: AsyncSession = Depends(ge
         reservation.status = "canceled"
         await session.commit()
         return build_declined_blocks(property_name=prop.name, guest_name=reservation.guest_name or "guest")
+    if action_id == "booking_mark_paid":
+        try:
+            await apply_mark_paid(session, reservation)
+        except MarkPaidError as exc:
+            return build_mark_paid_error_blocks(str(exc))
+        return build_mark_paid_confirmed_blocks(
+            property_name=prop.name, guest_name=reservation.guest_name or "guest"
+        )
 
     raise HTTPException(status_code=400, detail="unknown action_id")
 

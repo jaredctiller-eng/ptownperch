@@ -1,7 +1,14 @@
 from datetime import date
 
 from app.booking.quote import compute_quote
-from app.slack.blocks import build_declined_blocks, build_inquiry_blocks, build_overlap_error_blocks
+from app.slack.blocks import (
+    build_declined_blocks,
+    build_inquiry_blocks,
+    build_mark_paid_confirmed_blocks,
+    build_mark_paid_error_blocks,
+    build_overlap_error_blocks,
+    build_signed_blocks,
+)
 
 
 def _quote():
@@ -31,3 +38,19 @@ def test_declined_blocks_have_no_actions():
 def test_overlap_error_blocks_include_message():
     payload = build_overlap_error_blocks("dates now conflict with reservation #7")
     assert "dates now conflict" in payload["blocks"][0]["text"]["text"]
+
+
+def test_signed_blocks_have_mark_paid_button():
+    payload = build_signed_blocks(
+        property_name="Ptown Perch", guest_name="Alice", reservation_id=9, total="$688.00"
+    )
+    actions = payload["blocks"][-1]["elements"]
+    assert actions[0]["action_id"] == "booking_mark_paid"
+    assert actions[0]["value"] == "9"
+
+
+def test_mark_paid_confirmed_and_error_blocks():
+    ok = build_mark_paid_confirmed_blocks(property_name="Ptown Perch", guest_name="Alice")
+    assert "Confirmed" in ok["blocks"][0]["text"]["text"]
+    err = build_mark_paid_error_blocks("reservation has no signed contract on file")
+    assert "no signed contract" in err["blocks"][0]["text"]["text"]

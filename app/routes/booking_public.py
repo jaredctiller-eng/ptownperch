@@ -15,7 +15,7 @@ from app.config import settings
 from app.db import get_session
 from app.models import Property, Reservation
 from app.routes.admin import _get_property_or_404
-from app.slack.blocks import build_inquiry_blocks
+from app.slack.blocks import build_inquiry_blocks, build_signed_blocks
 from app.slack.notify import post_slack_blocks
 
 logger = logging.getLogger(__name__)
@@ -211,5 +211,17 @@ async def book_guest_sign(
     reservation.signed_ip = request.client.host if request.client else None
     reservation.contract_snapshot = contract_text
     await session.commit()
+
+    try:
+        await post_slack_blocks(
+            build_signed_blocks(
+                property_name=prop.name,
+                guest_name=reservation.guest_name or "guest",
+                reservation_id=reservation.id,
+                total=_quote_context(prop, reservation)["total"],
+            )
+        )
+    except Exception:
+        logger.exception("slack post failed for signed reservation #%s", reservation.id)
 
     return RedirectResponse(url=f"/book/{token}", status_code=303)

@@ -101,3 +101,60 @@ def build_overlap_error_blocks(message: str) -> dict:
             }
         ],
     }
+
+
+def build_signed_blocks(*, property_name: str, guest_name: str, reservation_id: int, total: str) -> dict:
+    return {
+        "text": f"{guest_name} signed the agreement at {property_name}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": (
+                        f":pencil2: *{guest_name} signed the rental agreement* at {property_name}\n"
+                        f"Total due: {total}. Tap Mark Paid once you see the Venmo/Zelle payment land."
+                    ),
+                },
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "Mark Paid"},
+                        "style": "primary",
+                        "action_id": "booking_mark_paid",
+                        "value": str(reservation_id),
+                    }
+                ],
+            },
+        ],
+    }
+
+
+def build_mark_paid_confirmed_blocks(*, property_name: str, guest_name: str) -> dict:
+    return {
+        "text": f"Confirmed: {guest_name} at {property_name}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f":tada: *Confirmed* — {guest_name} at {property_name} is paid and confirmed.",
+                },
+            }
+        ],
+    }
+
+
+def build_mark_paid_error_blocks(message: str) -> dict:
+    return {
+        "text": f"Could not mark paid: {message}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f":warning: *Could not mark paid* — {message}"},
+            }
+        ],
+    }

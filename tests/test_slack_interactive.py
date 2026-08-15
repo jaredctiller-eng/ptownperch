@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import time
-from datetime import date
+from datetime import UTC, date, datetime
 from unittest.mock import patch
 
 from app.config import settings
@@ -134,3 +134,32 @@ async def test_malformed_payload_shape_returns_400(client, monkeypatch):
         headers={**_signed_headers(body, "shh"), "content-type": "application/x-www-form-urlencoded"},
     )
     assert resp.status_code == 400
+
+
+async def test_mark_paid_action_confirms(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "slack_signing_secret", "shh")
+    res = Reservation(property_id=prop.id, source="direct", status="hold",
+                       guest_name="Alice", check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+                       signed_at=datetime(2026, 8, 15, tzinfo=UTC))
+    session.add(res)
+    await session.flush()
+
+    resp = await _post_interaction(client, "booking_mark_paid", res.id, "shh")
+    assert resp.status_code == 200
+    await session.refresh(res)
+    assert res.status == "confirmed"
+
+
+async def test_mark_paid_action_rejects_unsigned(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "slack_signing_secret", "shh")
+    res = Reservation(property_id=prop.id, source="direct", status="hold",
+                       guest_name="Alice", check_in=date(2026, 9, 1), check_out=date(2026, 9, 5))
+    session.add(res)
+    await session.flush()
+
+    resp = await _post_interaction(client, "booking_mark_paid", res.id, "shh")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "signed" in body["blocks"][0]["text"]["text"].lower()
+    await session.refresh(res)
+    assert res.status == "hold"

@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.admin_auth import require_admin
 from app.booking.availability import assert_no_overlap
 from app.booking.contract import has_unresolved_blanks
+from app.booking.mark_paid import MarkPaidError
+from app.booking.mark_paid import mark_paid as apply_mark_paid
 from app.config import settings
 from app.db import get_session
 from app.models import DIRECT_BLOCKING_STATUSES, Property, Reservation
@@ -250,7 +252,7 @@ async def update_contract_template(
 
 
 @router.post("/reservations/{reservation_id}/mark-paid", response_model=ReservationOut)
-async def mark_paid(
+async def mark_paid_endpoint(
     reservation_id: int,
     property_slug: str | None = None,
     session: AsyncSession = Depends(get_session),
@@ -269,13 +271,11 @@ async def mark_paid(
     ).scalar_one_or_none()
     if reservation is None:
         raise HTTPException(status_code=404, detail="unknown reservation")
-    if reservation.status != "hold":
-        raise HTTPException(status_code=422, detail="reservation is not in hold status")
-    if reservation.signed_at is None:
-        raise HTTPException(status_code=422, detail="reservation has no signed contract on file")
 
-    reservation.status = "confirmed"
-    await session.commit()
+    try:
+        await apply_mark_paid(session, reservation)
+    except MarkPaidError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
     await session.refresh(reservation)
 
     try:
