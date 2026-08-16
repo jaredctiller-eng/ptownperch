@@ -13,6 +13,34 @@ async def test_dashboard_requires_auth(client, prop):
     assert resp.status_code in (401, 503)
 
 
+async def test_post_handlers_require_auth(client):
+    for path in ("/dashboard/config", "/dashboard/contract-template", "/dashboard/rates"):
+        resp = await client.post(path, data={})
+        assert resp.status_code in (401, 503)
+
+
+async def test_dashboard_rejects_invalid_month(client, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    resp = await client.get("/dashboard?year=2026&month=13", auth=AUTH)
+    assert resp.status_code == 422
+
+
+async def test_dashboard_month_zero_rejected_not_silently_substituted(client, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    resp = await client.get("/dashboard?year=2026&month=0", auth=AUTH)
+    assert resp.status_code == 422
+
+
+async def test_config_form_rejects_non_numeric_rate(client, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    resp = await client.post(
+        "/dashboard/config",
+        data={"nightly_rate_dollars": "not-a-number", "year": "2026", "month": "10"},
+        auth=AUTH,
+    )
+    assert resp.status_code == 422
+
+
 async def test_dashboard_renders_calendar_hold_and_lists_inquiry(client, session, prop, monkeypatch):
     monkeypatch.setattr(settings, "admin_password", "secret")
 
@@ -59,6 +87,23 @@ async def test_dashboard_renders_calendar_hold_and_lists_inquiry(client, session
     # human review, and the inquiry list is that surface on this page.
     assert "Pending Inquiry Person" in reservation_section
     assert "inquiry" in reservation_section
+
+
+async def test_dashboard_reservation_list_is_not_capped_at_30(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "secret")
+
+    for i in range(35):
+        session.add(Reservation(
+            property_id=prop.id, source="direct", status="hold", guest_name=f"Guest {i}",
+            check_in=date(2020, 1, 1 + (i % 27)), check_out=date(2020, 1, 2 + (i % 27)),
+        ))
+    await session.flush()
+
+    resp = await client.get("/dashboard?year=2020&month=1", auth=AUTH)
+    assert resp.status_code == 200
+    reservation_section = resp.text.partition("<h2>Reservations</h2>")[2]
+    for i in range(35):
+        assert f"Guest {i}" in reservation_section
 
 
 async def test_dashboard_post_config_updates_property(client, session, prop, monkeypatch):

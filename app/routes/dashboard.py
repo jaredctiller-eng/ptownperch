@@ -57,8 +57,11 @@ async def dashboard_page(
     prop = await _get_property_or_404(session, slug)
 
     today = _today()
-    view_year = year or today.year
-    view_month = month or today.month
+    view_year = year if year is not None else today.year
+    view_month = month if month is not None else today.month
+
+    if not (1900 <= view_year <= 2200) or not (1 <= view_month <= 12):
+        raise HTTPException(status_code=422, detail="invalid year/month")
 
     reservations = (
         await session.execute(
@@ -81,7 +84,7 @@ async def dashboard_page(
         {
             "property": prop,
             "calendar_days": calendar_days,
-            "reservations": reservations[:30],
+            "reservations": reservations,
             "year": view_year,
             "month": view_month,
             "prev_year": prev_year,
@@ -103,7 +106,12 @@ async def dashboard_update_config(
     property_slug: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
 ):
-    cents = round(float(nightly_rate_dollars) * 100)
+    try:
+        cents = round(float(nightly_rate_dollars) * 100)
+    except ValueError:
+        raise HTTPException(
+            status_code=422, detail=f"invalid rate: {nightly_rate_dollars!r}"
+        ) from None
     payload = admin.ConfigUpdate(
         nightly_rate_cents=cents,
         direct_booking_tax_enabled=bool(direct_booking_tax_enabled),
