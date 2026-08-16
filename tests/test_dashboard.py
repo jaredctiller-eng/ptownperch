@@ -13,7 +13,7 @@ async def test_dashboard_requires_auth(client, prop):
     assert resp.status_code in (401, 503)
 
 
-async def test_dashboard_renders_calendar_and_excludes_inquiry(client, session, prop, monkeypatch):
+async def test_dashboard_renders_calendar_hold_and_lists_inquiry(client, session, prop, monkeypatch):
     monkeypatch.setattr(settings, "admin_password", "secret")
 
     hold = Reservation(
@@ -21,7 +21,7 @@ async def test_dashboard_renders_calendar_and_excludes_inquiry(client, session, 
         check_in=date(2026, 10, 10), check_out=date(2026, 10, 13),
     )
     inquiry = Reservation(
-        property_id=prop.id, source="direct", status="inquiry", guest_name="Secret Inquiry Person",
+        property_id=prop.id, source="direct", status="inquiry", guest_name="Pending Inquiry Person",
         check_in=date(2026, 10, 20), check_out=date(2026, 10, 22),
     )
     block = CalendarBlock(
@@ -34,8 +34,31 @@ async def test_dashboard_renders_calendar_and_excludes_inquiry(client, session, 
     resp = await client.get("/dashboard?year=2026&month=10", auth=AUTH)
     assert resp.status_code == 200
     body = resp.text
-    assert "Jane Doe" in body
-    assert "Secret Inquiry Person" not in body
+
+    # calendar grid: a direct hold shows the guest name against a
+    # direct_hold day, and the inquiry's dates are correctly ignored
+    # (unit-covered exhaustively in test_calendar_view.py; here we just
+    # confirm the route wires the same behavior through end to end).
+    calendar_section, _, reservation_section = body.partition("<h2>Reservations</h2>")
+    assert "Jane Doe" in calendar_section
+    assert "direct_hold" in calendar_section
+
+    # the inquiry's dates must appear as "available" days in the calendar
+    # grid, not marked with any blocking status.
+    calendar_lines = calendar_section.splitlines()
+    for day_num in (20, 21):
+        marker = f"2026-10-{day_num}"
+        idx = next(i for i, line in enumerate(calendar_lines) if marker in line)
+        status_line = calendar_lines[idx + 1]
+        assert "available" in status_line
+        for blocking_status in ("direct_hold", "direct_confirmed", "airbnb", "blocked"):
+            assert blocking_status not in status_line
+
+    # reservation list: pending inquiries ARE shown so an operator can see
+    # them without checking Slack — this system routes everything through
+    # human review, and the inquiry list is that surface on this page.
+    assert "Pending Inquiry Person" in reservation_section
+    assert "inquiry" in reservation_section
 
 
 async def test_dashboard_post_config_updates_property(client, session, prop, monkeypatch):

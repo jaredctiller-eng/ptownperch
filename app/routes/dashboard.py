@@ -75,20 +75,13 @@ async def dashboard_page(
     calendar_days = build_month_calendar(view_year, view_month, list(reservations), list(blocks))
     (prev_year, prev_month), (next_year, next_month) = _prev_next_month(view_year, view_month)
 
-    # "inquiry" rows are unconfirmed leads, not real bookings; they never
-    # occupy a calendar day (see build_month_calendar) and — deliberately,
-    # mirroring that same not-a-booking-yet treatment — they're also left out
-    # of the operator-facing reservation list here, so a guest's name from an
-    # inquiry that hasn't been approved never surfaces on this page.
-    display_reservations = [r for r in reservations if r.status != "inquiry"][:30]
-
     return templates.TemplateResponse(
         request,
         "dashboard.html",
         {
             "property": prop,
             "calendar_days": calendar_days,
-            "reservations": display_reservations,
+            "reservations": reservations[:30],
             "year": view_year,
             "month": view_month,
             "prev_year": prev_year,
