@@ -22,7 +22,7 @@ def build_inquiry_blocks(
                         f":email: *New direct booking inquiry* at {property_name}\n"
                         f"{guest_name} — {check_in} → {check_out} ({quote.nights} nights)\n"
                         f"Quote: {_money(quote.total_cents)} "
-                        f"(rate {_money(quote.nightly_rate_cents)}/night, "
+                        f"(avg {_money(quote.subtotal_cents // quote.nights)}/night, "
                         f"discount -{_money(quote.discount_cents)})"
                     ),
                 },

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.booking.availability import assert_no_overlap
 from app.booking.contract import has_unresolved_blanks, render_contract
 from app.booking.quote import compute_quote
+from app.booking.rates import resolve_nightly_rates
 from app.config import settings
 from app.db import get_session
 from app.models import Property, Reservation
@@ -52,10 +53,11 @@ async def book_request_submit(
 
     await assert_no_overlap(session, prop.id, check_in, check_out)
 
+    nightly_rates = await resolve_nightly_rates(
+        session, prop.id, check_in, check_out, prop.nightly_rate_cents
+    )
     quote = compute_quote(
-        nightly_rate_cents=prop.nightly_rate_cents,
-        check_in=check_in,
-        check_out=check_out,
+        nightly_rates_cents=nightly_rates,
         tax_enabled=prop.direct_booking_tax_enabled,
         tax_rate_percent=prop.direct_booking_tax_rate_percent,
     )
@@ -92,11 +94,12 @@ async def book_thanks(request: Request):
     return templates.TemplateResponse(request, "book_thanks.html")
 
 
-def _quote_context(prop: Property, reservation: Reservation) -> dict:
+async def _quote_context(session: AsyncSession, prop: Property, reservation: Reservation) -> dict:
+    nightly_rates = await resolve_nightly_rates(
+        session, prop.id, reservation.check_in, reservation.check_out, prop.nightly_rate_cents or 0
+    )
     quote = compute_quote(
-        nightly_rate_cents=prop.nightly_rate_cents or 0,
-        check_in=reservation.check_in,
-        check_out=reservation.check_out,
+        nightly_rates_cents=nightly_rates,
         tax_enabled=prop.direct_booking_tax_enabled,
         tax_rate_percent=prop.direct_booking_tax_rate_percent,
     )
@@ -138,7 +141,7 @@ async def book_guest_page(
                 "contract_text": reservation.contract_snapshot,
                 "signed_name": reservation.signed_name,
                 "signed_at": reservation.signed_at,
-                **_quote_context(prop, reservation),
+                **(await _quote_context(session, prop, reservation)),
             },
         )
 
@@ -155,7 +158,7 @@ async def book_guest_page(
         )
 
     try:
-        contract_text = render_contract(template, _quote_context(prop, reservation))
+        contract_text = render_contract(template, await _quote_context(session, prop, reservation))
     except UndefinedError:
         # A template referencing a context key we don't provide is an
         # operator template bug, not a guest-facing crash.
@@ -166,7 +169,12 @@ async def book_guest_page(
 
     return templates.TemplateResponse(
         request, "book_guest.html",
-        {"signed": False, "contract_text": contract_text, "token": token, **_quote_context(prop, reservation)},
+        {
+            "signed": False,
+            "contract_text": contract_text,
+            "token": token,
+            **(await _quote_context(session, prop, reservation)),
+        },
     )
 
 
@@ -198,7 +206,7 @@ async def book_guest_sign(
             detail="contract template is incomplete — this booking cannot be signed yet",
         )
     try:
-        contract_text = render_contract(template, _quote_context(prop, reservation))
+        contract_text = render_contract(template, await _quote_context(session, prop, reservation))
     except UndefinedError:
         raise HTTPException(
             status_code=503,
@@ -215,10 +223,12 @@ async def book_guest_sign(
     await session.commit()
 
     try:
+        nightly_rates = await resolve_nightly_rates(
+            session, prop.id, reservation.check_in, reservation.check_out,
+            prop.nightly_rate_cents or 0,
+        )
         quote = compute_quote(
-            nightly_rate_cents=prop.nightly_rate_cents or 0,
-            check_in=reservation.check_in,
-            check_out=reservation.check_out,
+            nightly_rates_cents=nightly_rates,
             tax_enabled=prop.direct_booking_tax_enabled,
             tax_rate_percent=prop.direct_booking_tax_rate_percent,
         )

@@ -76,6 +76,16 @@ class Reservation(Base):
     hold_warned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
 
+class DailyRate(Base):
+    __tablename__ = "daily_rates"
+    __table_args__ = (UniqueConstraint("property_id", "date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    property_id: Mapped[int] = mapped_column(ForeignKey("properties.id"))
+    date: Mapped[date] = mapped_column(Date)
+    rate_cents: Mapped[int] = mapped_column(Integer)
+
+
 class CalendarBlock(Base):
     __tablename__ = "calendar_blocks"
     __table_args__ = (CheckConstraint("end_date > start_date", name="valid_date_range"),)

@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.models import CalendarBlock, Property, Reservation
+from app.models import CalendarBlock, DailyRate, Property, Reservation
 
 
 async def test_property_reservation_roundtrip(session, prop):
@@ -105,6 +105,31 @@ async def test_reservation_phase2_fields_roundtrip(session, prop):
     assert stored.signed_at == datetime(2026, 8, 15, tzinfo=UTC)
     assert stored.created_at is not None
     assert stored.hold_warned_at is None
+
+
+async def test_daily_rate_roundtrip_multiple_dates(session, prop):
+    session.add_all(
+        [
+            DailyRate(property_id=prop.id, date=date(2026, 9, 1), rate_cents=45000),
+            DailyRate(property_id=prop.id, date=date(2026, 9, 2), rate_cents=99400),
+        ]
+    )
+    await session.flush()
+
+    rows = (await session.execute(select(DailyRate))).scalars().all()
+    by_date = {r.date: r.rate_cents for r in rows}
+    assert by_date == {date(2026, 9, 1): 45000, date(2026, 9, 2): 99400}
+
+
+async def test_daily_rate_unique_property_and_date(session, prop):
+    session.add_all(
+        [
+            DailyRate(property_id=prop.id, date=date(2026, 9, 1), rate_cents=45000),
+            DailyRate(property_id=prop.id, date=date(2026, 9, 1), rate_cents=50000),
+        ]
+    )
+    with pytest.raises(IntegrityError):
+        await session.flush()
 
 
 async def test_booking_token_unique_but_multiple_nulls_allowed(session, prop):

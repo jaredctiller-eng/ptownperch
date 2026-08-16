@@ -14,7 +14,7 @@ from app.slack.blocks import (
 
 def _quote():
     return compute_quote(
-        nightly_rate_cents=20000, check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+        nightly_rates_cents=[20000, 20000, 20000, 20000],
         tax_enabled=False, tax_rate_percent=14.45,
     )
 

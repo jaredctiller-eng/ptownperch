@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import date
 
 # Airbnb's guest service fee is roughly 14-16%; passing this back means a
 # direct-booking guest pays noticeably less than booking on Airbnb, while the
@@ -10,7 +9,6 @@ DIRECT_BOOKING_DISCOUNT = 0.14
 @dataclass(frozen=True)
 class Quote:
     nights: int
-    nightly_rate_cents: int
     subtotal_cents: int
     discount_cents: int
     tax_cents: int
@@ -18,23 +16,17 @@ class Quote:
 
 
 def compute_quote(
-    *,
-    nightly_rate_cents: int,
-    check_in: date,
-    check_out: date,
-    tax_enabled: bool,
-    tax_rate_percent: float,
+    *, nightly_rates_cents: list[int], tax_enabled: bool, tax_rate_percent: float
 ) -> Quote:
-    if check_out <= check_in:
-        raise ValueError("check_out must be after check_in")
-    nights = (check_out - check_in).days
-    subtotal_cents = nightly_rate_cents * nights
+    if not nightly_rates_cents:
+        raise ValueError("at least one night is required")
+    nights = len(nightly_rates_cents)
+    subtotal_cents = sum(nightly_rates_cents)
     discount_cents = round(subtotal_cents * DIRECT_BOOKING_DISCOUNT)
     taxable_cents = subtotal_cents - discount_cents
     tax_cents = round(taxable_cents * tax_rate_percent / 100) if tax_enabled else 0
     return Quote(
         nights=nights,
-        nightly_rate_cents=nightly_rate_cents,
         subtotal_cents=subtotal_cents,
         discount_cents=discount_cents,
         tax_cents=tax_cents,

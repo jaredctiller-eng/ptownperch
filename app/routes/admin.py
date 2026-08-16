@@ -13,7 +13,7 @@ from app.booking.mark_paid import MarkPaidError
 from app.booking.mark_paid import mark_paid as apply_mark_paid
 from app.config import settings
 from app.db import get_session
-from app.models import DIRECT_BLOCKING_STATUSES, Property, Reservation
+from app.models import DIRECT_BLOCKING_STATUSES, DailyRate, Property, Reservation
 from app.slack.notify import post_slack
 
 logger = logging.getLogger(__name__)
@@ -250,6 +250,48 @@ async def update_contract_template(
     prop.contract_template = payload.template
     await session.commit()
     return {"has_unresolved_blanks": has_unresolved_blanks(payload.template)}
+
+
+class BulkRatesUpdate(BaseModel):
+    rates: dict[str, int]  # ISO date string -> cents
+
+
+@router.put("/rates")
+async def update_rates(
+    payload: BulkRatesUpdate,
+    property_slug: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    slug = property_slug or settings.property_slug
+    prop = await _get_property_or_404(session, slug)
+
+    # Parse every date string before touching the database — an invalid date
+    # anywhere in the payload must reject the whole batch rather than
+    # partially applying whichever dates happened to parse first.
+    parsed: dict[date, int] = {}
+    for date_str, cents in payload.rates.items():
+        try:
+            parsed[date.fromisoformat(date_str)] = cents
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"invalid date: {date_str}") from None
+
+    existing = (
+        await session.execute(
+            select(DailyRate).where(
+                DailyRate.property_id == prop.id, DailyRate.date.in_(parsed.keys())
+            )
+        )
+    ).scalars().all()
+    existing_by_date = {r.date: r for r in existing}
+
+    for d, cents in parsed.items():
+        if d in existing_by_date:
+            existing_by_date[d].rate_cents = cents
+        else:
+            session.add(DailyRate(property_id=prop.id, date=d, rate_cents=cents))
+
+    await session.commit()
+    return {"updated_count": len(parsed)}
 
 
 @router.post("/reservations/{reservation_id}/mark-paid", response_model=ReservationOut)

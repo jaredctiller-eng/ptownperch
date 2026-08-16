@@ -1,5 +1,3 @@
-from datetime import date
-
 import pytest
 
 from app.booking.quote import compute_quote
@@ -7,7 +5,7 @@ from app.booking.quote import compute_quote
 
 def test_quote_applies_14_percent_discount_no_tax():
     q = compute_quote(
-        nightly_rate_cents=20000, check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+        nightly_rates_cents=[20000, 20000, 20000, 20000],
         tax_enabled=False, tax_rate_percent=14.45,
     )
     assert q.nights == 4
@@ -19,7 +17,7 @@ def test_quote_applies_14_percent_discount_no_tax():
 
 def test_quote_with_tax_enabled():
     q = compute_quote(
-        nightly_rate_cents=10000, check_in=date(2026, 9, 1), check_out=date(2026, 9, 2),
+        nightly_rates_cents=[10000],
         tax_enabled=True, tax_rate_percent=14.45,
     )
     assert q.subtotal_cents == 10000
@@ -31,7 +29,7 @@ def test_quote_with_tax_enabled():
 
 def test_quote_rounds_to_nearest_cent():
     q = compute_quote(
-        nightly_rate_cents=333, check_in=date(2026, 9, 1), check_out=date(2026, 9, 4),
+        nightly_rates_cents=[333, 333, 333],
         tax_enabled=False, tax_rate_percent=14.45,
     )
     assert q.subtotal_cents == 999
@@ -39,9 +37,24 @@ def test_quote_rounds_to_nearest_cent():
     assert isinstance(q.total_cents, int)
 
 
+def test_quote_sums_mixed_weekday_weekend_rates():
+    rates = [65000, 99400, 99400, 45000]
+    q = compute_quote(
+        nightly_rates_cents=rates,
+        tax_enabled=True, tax_rate_percent=14.45,
+    )
+    assert q.nights == 4
+    assert q.subtotal_cents == sum(rates)
+    discount = round(q.subtotal_cents * 0.14)
+    assert q.discount_cents == discount
+    taxable = q.subtotal_cents - discount
+    assert q.tax_cents == round(taxable * 14.45 / 100)
+    assert q.total_cents == taxable + q.tax_cents
+
+
 def test_rejects_non_positive_stay():
     with pytest.raises(ValueError):
         compute_quote(
-            nightly_rate_cents=10000, check_in=date(2026, 9, 5), check_out=date(2026, 9, 5),
+            nightly_rates_cents=[],
             tax_enabled=False, tax_rate_percent=14.45,
         )
