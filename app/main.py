@@ -9,7 +9,7 @@ from app.booking.hold_expiry import expire_stale_holds_all_properties
 from app.bootstrap import upsert_configured_property
 from app.config import settings
 from app.db import SessionLocal
-from app.routes import admin, booking_public, health, ical, slack_interactive
+from app.routes import admin, booking_public, dashboard, health, ical, slack_interactive
 from app.sync.run import sync_all_properties
 
 # httpx logs each request at INFO, including the full URL — and the Airbnb
@@ -49,3 +49,4 @@ app.include_router(ical.router)
 app.include_router(admin.router)
 app.include_router(booking_public.router)
 app.include_router(slack_interactive.router)
+app.include_router(dashboard.router)
