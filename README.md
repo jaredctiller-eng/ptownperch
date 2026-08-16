@@ -21,6 +21,10 @@ Ops backend for Ptown Perch (ptownperch.com). Spec:
   an unsigned booking.
 - Unpaid holds auto-expire after 48h (warned at 36h).
 - Schema is Alembic-managed from this phase onward — see "Deploy" below.
+- Quotes use per-night pricing (`PUT /admin/rates`, a bulk `{"YYYY-MM-DD": cents}`
+  upload — e.g. paste a month's worth of Airbnb calendar prices at once) with
+  `nightly_rate_cents` on `Property` as the fallback for any date without an
+  explicit entry.
 
 ## Local dev
     python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
@@ -45,17 +49,19 @@ Ops backend for Ptown Perch (ptownperch.com). Spec:
 ## Deploy (Railway, dedicated project)
 Deployed via Procfile (uvicorn web process; scheduler runs in-process).
 
-**Migrations (from Phase 2 onward):** this repo uses Alembic. After merging a
-migration, apply it to production yourself — it does not auto-run on deploy:
-    export DATABASE_URL=<Postgres service's public proxy URL, not the
-      .railway.internal one — alembic runs from your laptop, outside
-      Railway's private network>
-    .venv/bin/alembic upgrade head
-The very first Alembic migration (`0001_baseline`) must be applied with
-`alembic stamp 0001` instead of `upgrade head`, since production's tables
-already existed (created by the old `create_all`) before Alembic was
-introduced — `stamp` records the revision without re-running `CREATE TABLE`.
-Every migration after that uses the normal `upgrade head`.
+**Migrations:** the Railway service's `preDeployCommand` is set to
+`alembic upgrade head`, so every deploy applies any pending migration
+automatically before the app boots — no manual step needed for ordinary
+migrations. `alembic upgrade head` is idempotent (a no-op when already
+current), so this is safe to leave in place permanently.
+
+The one exception was the very first migration (`0001_baseline`): production's
+tables already existed (created by the old `create_all`) before Alembic was
+introduced, so `0001` had to be applied once with `alembic stamp 0001`
+instead of `upgrade head` — `stamp` records the revision without re-running
+`CREATE TABLE`. That was a one-time bootstrap step, already done; every
+migration since (`0002`, `0003`, ...) has applied automatically via the
+pre-deploy command.
 
 **Phase 1 setup (property + Airbnb connection), needed on a first-time
 deploy — do this before the Phase 2 steps below:** seed the property with
