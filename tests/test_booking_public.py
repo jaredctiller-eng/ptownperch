@@ -118,6 +118,7 @@ async def test_guest_page_shows_unsigned_form(client, session, prop):
     res = Reservation(property_id=prop.id, source="direct", status="hold",
                        guest_name="Alice", guest_email="alice@example.com",
                        check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+                       agreed_total_cents=200000,
                        booking_token="tok-abc")
     session.add(res)
     await session.flush()
@@ -132,6 +133,7 @@ async def test_guest_page_shows_signed_confirmation(client, session, prop):
     prop.contract_template = "x"
     res = Reservation(property_id=prop.id, source="direct", status="hold",
                        guest_name="Alice", check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+                       agreed_total_cents=200000,
                        booking_token="tok-signed", signed_at=datetime(2026, 8, 1, tzinfo=UTC),
                        contract_snapshot="Signed text")
     session.add(res)
@@ -148,6 +150,7 @@ async def test_sign_stores_signature_and_redirects(client, session, prop):
     prop.nightly_rate_cents = 20000
     res = Reservation(property_id=prop.id, source="direct", status="hold",
                        guest_name="Alice", check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+                       agreed_total_cents=200000,
                        booking_token="tok-sign")
     session.add(res)
     await session.flush()
@@ -166,7 +169,8 @@ async def test_sign_stores_signature_and_redirects(client, session, prop):
     await session.refresh(res)
     assert res.signed_name == "Alice Guest"
     assert res.signature_image == "data:image/png;base64,abc123"
-    assert res.contract_snapshot == "Guest: Alice, Total: $688.00"
+    # The snapshot carries the AGREED total, not a rate-derived quote.
+    assert res.contract_snapshot == "Guest: Alice, Total: $2,000.00"
     assert res.signed_at is not None
     assert res.status == "hold"  # signing alone doesn't confirm — mark-paid does
 

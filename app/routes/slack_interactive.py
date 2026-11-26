@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.booking.availability import assert_no_overlap
 from app.booking.mark_paid import MarkPaidError
 from app.booking.mark_paid import mark_paid as apply_mark_paid
+from app.booking.terms import TermsError, parse_total_to_cents
 from app.booking.tokens import generate_booking_token
 from app.config import settings
 from app.db import get_session
@@ -22,6 +23,7 @@ from app.slack.blocks import (
     build_mark_paid_confirmed_blocks,
     build_mark_paid_error_blocks,
     build_overlap_error_blocks,
+    build_total_error_blocks,
 )
 from app.slack.verify import SlackVerificationError, verify_slack_signature
 
@@ -53,6 +55,18 @@ async def slack_interactive(request: Request, session: AsyncSession = Depends(ge
     except (KeyError, IndexError, ValueError, TypeError):
         raise HTTPException(status_code=400, detail="malformed interaction payload") from None
 
+    # Whatever the operator typed into the message's input block, if anything.
+    # Absent for Decline/Mark Paid and for any older message posted before the
+    # input block existed — those stay working, so a message already sitting in
+    # the channel does not break on deploy.
+    agreed_total_raw = (
+        payload.get("state", {})
+        .get("values", {})
+        .get("agreed_total", {})
+        .get("value", {})
+        .get("value")
+    )
+
     reservation = (
         await session.execute(
             select(Reservation).where(
@@ -68,7 +82,7 @@ async def slack_interactive(request: Request, session: AsyncSession = Depends(ge
     ).scalar_one()
 
     if action_id == "booking_approve":
-        return await _approve(session, reservation, prop)
+        return await _approve(session, reservation, prop, agreed_total_raw)
     if action_id == "booking_decline":
         reservation.status = "canceled"
         await session.commit()
@@ -85,7 +99,12 @@ async def slack_interactive(request: Request, session: AsyncSession = Depends(ge
     raise HTTPException(status_code=400, detail="unknown action_id")
 
 
-async def _approve(session: AsyncSession, reservation: Reservation, prop: Property) -> dict:
+async def _approve(
+    session: AsyncSession,
+    reservation: Reservation,
+    prop: Property,
+    agreed_total_raw: str | None,
+) -> dict:
     # Re-fetch the Property row WITH a lock before the overlap check. `prop`
     # as passed in was read without a lock by the dispatcher above, which
     # leaves a TOCTOU window: two Approve actions processed concurrently
@@ -95,6 +114,20 @@ async def _approve(session: AsyncSession, reservation: Reservation, prop: Proper
     # check and both commit. Reuse the same locking helper the admin routes
     # use rather than duplicating the query; `prop.slug` is already loaded
     # from the unlocked fetch, so no signature change is needed here.
+    # Validate the agreed total before anything else: a typo must leave the
+    # reservation exactly as it was, not half-approved with a bad number.
+    # Re-approving an already-priced reservation without retyping the total
+    # keeps the stored one.
+    try:
+        if agreed_total_raw is not None and agreed_total_raw.strip():
+            total_cents = parse_total_to_cents(agreed_total_raw)
+        elif reservation.agreed_total_cents is not None:
+            total_cents = reservation.agreed_total_cents
+        else:
+            raise TermsError("no agreed total was entered")
+    except TermsError as exc:
+        return build_total_error_blocks(str(exc))
+
     prop = await _get_property_or_404(session, prop.slug, for_update=True)
     try:
         # Time has passed since the inquiry was created — re-check for a
@@ -105,6 +138,7 @@ async def _approve(session: AsyncSession, reservation: Reservation, prop: Proper
         return build_overlap_error_blocks(f"dates now conflict — {exc.detail}")
 
     reservation.status = "hold"
+    reservation.agreed_total_cents = total_cents
     reservation.booking_token = generate_booking_token()
     await session.commit()
 
