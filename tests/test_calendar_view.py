@@ -103,3 +103,13 @@ def test_inquiry_and_canceled_reservations_ignored():
         d = by_date[date(2026, 10, day_num)]
         assert d.status == "available"
         assert d.label is None
+
+
+def test_airbnb_not_available_block_shows_as_blocked_not_airbnb():
+    res = _res(
+        source="airbnb_ical", status="confirmed", guest_name=None, is_airbnb_block=True,
+        check_in=date(2026, 10, 5), check_out=date(2026, 10, 7),
+    )
+    days = {d.date: d for d in build_month_calendar(2026, 10, [res], [])}
+    assert days[date(2026, 10, 5)].status == "blocked"
+    assert days[date(2026, 10, 6)].status == "blocked"

@@ -67,6 +67,7 @@ async def apply_airbnb_events(
         processed.add(event.uid)
         if event.uid in by_uid:
             reservation = by_uid[event.uid]
+            reservation.is_airbnb_block = not event.is_reservation
             if reservation.status == "canceled":
                 # Resurrected: the feed dropped it (transient glitch or a real
                 # cancel/rebook) and it's back. Reactivate rather than trying
@@ -87,6 +88,7 @@ async def apply_airbnb_events(
                     source="airbnb_ical",
                     status="confirmed",
                     external_uid=event.uid,
+                    is_airbnb_block=not event.is_reservation,
                     check_in=event.start,
                     check_out=event.end,
                 )

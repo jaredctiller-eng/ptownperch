@@ -175,3 +175,24 @@ async def test_sync_property_slack_failure_does_not_drop_batch(session, prop, mo
     await sync_property(session, prop)  # must not raise
 
     assert len(calls) == 2  # second message still attempted
+
+
+async def test_sync_flags_not_available_as_block_and_backfills_existing(session, prop):
+    await apply_airbnb_events(session, prop.id, [
+        ev(uid="b@airbnb.com", summary="Reserved"),
+        ev(uid="blk@airbnb.com", start=date(2026, 9, 10), end=date(2026, 9, 12),
+           summary="Airbnb (Not available)"),
+    ])
+    rows = {r.external_uid: r for r in (await session.execute(select(Reservation))).scalars()}
+    assert rows["b@airbnb.com"].is_airbnb_block is False
+    assert rows["blk@airbnb.com"].is_airbnb_block is True
+
+    # a legacy row (flag unset) is classified on the next sync
+    rows["blk@airbnb.com"].is_airbnb_block = None
+    await session.flush()
+    await apply_airbnb_events(session, prop.id, [
+        ev(uid="b@airbnb.com", summary="Reserved"),
+        ev(uid="blk@airbnb.com", start=date(2026, 9, 10), end=date(2026, 9, 12),
+           summary="Airbnb (Not available)"),
+    ])
+    assert rows["blk@airbnb.com"].is_airbnb_block is True

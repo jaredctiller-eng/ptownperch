@@ -79,6 +79,14 @@ class Reservation(Base):
     # inquiry not yet approved. Everything in the contract's payment schedule
     # derives from this (app/booking/terms.py).
     agreed_total_cents: Mapped[int | None] = mapped_column(Integer, default=None)
+    # Airbnb-sourced rows only: True when the iCal event was a host/system
+    # "Not available" block rather than a real "Reserved" booking. Both stop
+    # the dates being sold, but only bookings count as stays/occupancy.
+    # Null until the next sync classifies a pre-existing row.
+    is_airbnb_block: Mapped[bool | None] = mapped_column(Boolean, default=None)
+    # Airbnb-sourced bookings only: what Airbnb paid out, entered by hand
+    # because the iCal feed carries no prices. Counts as collected revenue.
+    airbnb_payout_cents: Mapped[int | None] = mapped_column(Integer, default=None)
 
 
 class DailyRate(Base):

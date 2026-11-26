@@ -90,4 +90,59 @@ async def test_dashboard_shows_revenue_panel(client, session, prop, monkeypatch)
     body = resp.text
     assert "<h2>Revenue</h2>" in body
     assert "$1,234.00" in body
-    assert "direct bookings only" in body.lower()
+    assert "airbnb payouts" in body.lower()
+
+
+def test_airbnb_block_is_not_occupancy():
+    blk = _res("airbnb_ical", "confirmed", date(2026, 10, 1), date(2026, 10, 6))
+    blk.is_airbnb_block = True
+    s = _summ([blk])
+    assert s.occupied_nights == 0
+    assert s.airbnb_nights == 0
+
+
+def test_airbnb_payout_counts_as_collected_and_prorates():
+    r = _res("airbnb_ical", "confirmed", date(2026, 9, 29), date(2026, 10, 3))
+    r.airbnb_payout_cents = 80000
+    s = _summ([r])
+    assert s.airbnb_collected_cents == 40000  # 2 of 4 nights in October
+    assert s.collected_cents == 40000
+    assert s.airbnb_nights == 2
+
+
+async def test_set_and_clear_airbnb_payout(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    r = Reservation(
+        property_id=prop.id, source="airbnb_ical", status="confirmed", is_airbnb_block=False,
+        check_in=date(2026, 10, 1), check_out=date(2026, 10, 3), external_uid="x@a",
+    )
+    blk = Reservation(
+        property_id=prop.id, source="airbnb_ical", status="confirmed", is_airbnb_block=True,
+        check_in=date(2026, 10, 5), check_out=date(2026, 10, 6), external_uid="y@a",
+    )
+    session.add_all([r, blk])
+    await session.flush()
+
+    resp = await client.post("/dashboard/airbnb-payout", auth=AUTH, follow_redirects=False,
+                             data={"reservation_id": str(r.id), "payout_dollars": "$1,234.50"})
+    assert resp.status_code == 303
+    await session.refresh(r)
+    assert r.airbnb_payout_cents == 123450
+
+    page = await client.get("/dashboard?year=2026&month=10", auth=AUTH)
+    assert "$1,234.50" in page.text
+
+    bad = await client.post("/dashboard/airbnb-payout", auth=AUTH,
+                            data={"reservation_id": str(r.id), "payout_dollars": "abc"})
+    assert bad.status_code == 422
+    nan = await client.post("/dashboard/airbnb-payout", auth=AUTH,
+                            data={"reservation_id": str(r.id), "payout_dollars": "NaN"})
+    assert nan.status_code == 422
+    on_block = await client.post("/dashboard/airbnb-payout", auth=AUTH,
+                                 data={"reservation_id": str(blk.id), "payout_dollars": "10"})
+    assert on_block.status_code == 404
+
+    await client.post("/dashboard/airbnb-payout", auth=AUTH,
+                      data={"reservation_id": str(r.id), "payout_dollars": ""})
+    await session.refresh(r)
+    assert r.airbnb_payout_cents is None

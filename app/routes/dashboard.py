@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -129,6 +130,41 @@ async def dashboard_update_config(
         direct_booking_tax_enabled=bool(direct_booking_tax_enabled),
     )
     await admin.update_config(payload, property_slug, session)
+    return _redirect_to_dashboard(year, month, property_slug)
+
+
+@router.post("/airbnb-payout")
+async def dashboard_set_airbnb_payout(
+    reservation_id: int = Form(...),
+    payout_dollars: str = Form(""),
+    year: int | None = Form(None),
+    month: int | None = Form(None),
+    property_slug: str | None = Form(None),
+    session: AsyncSession = Depends(get_session),
+):
+    prop = await _get_property_or_404(session, property_slug or settings.property_slug)
+    reservation = await session.get(Reservation, reservation_id)
+    if (
+        reservation is None
+        or reservation.property_id != prop.id
+        or reservation.source != "airbnb_ical"
+        or reservation.is_airbnb_block
+    ):
+        raise HTTPException(status_code=404, detail="Airbnb booking not found")
+    text = payout_dollars.strip().replace("$", "").replace(",", "")
+    if text == "":
+        reservation.airbnb_payout_cents = None
+    else:
+        try:
+            dollars = Decimal(text)
+        except InvalidOperation:
+            raise HTTPException(
+                status_code=422, detail=f"invalid amount: {payout_dollars!r}"
+            ) from None
+        if not dollars.is_finite() or dollars < 0 or dollars > 1_000_000:
+            raise HTTPException(status_code=422, detail=f"invalid amount: {payout_dollars!r}")
+        reservation.airbnb_payout_cents = int((dollars * 100).to_integral_value(ROUND_HALF_UP))
+    await session.commit()
     return _redirect_to_dashboard(year, month, property_slug)
 
 
