@@ -74,6 +74,11 @@ class Reservation(Base):
     signed_ip: Mapped[str | None] = mapped_column(String(64), default=None)
     contract_snapshot: Mapped[str | None] = mapped_column(Text, default=None)
     hold_warned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # The flat total agreed with the guest over text, set when the inquiry is
+    # approved in Slack. Null on an Airbnb-sourced reservation and on a direct
+    # inquiry not yet approved. Everything in the contract's payment schedule
+    # derives from this (app/booking/terms.py).
+    agreed_total_cents: Mapped[int | None] = mapped_column(Integer, default=None)
 
 
 class DailyRate(Base):

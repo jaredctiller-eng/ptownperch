@@ -16,8 +16,14 @@ def _signed_headers(body: bytes, secret: str) -> dict:
     return {"X-Slack-Request-Timestamp": timestamp, "X-Slack-Signature": sig}
 
 
-async def _post_interaction(client, action_id: str, reservation_id: int, secret: str):
+async def _post_interaction(
+    client, action_id: str, reservation_id: int, secret: str, agreed_total: str | None = "2000"
+):
     payload = {"actions": [{"action_id": action_id, "value": str(reservation_id)}]}
+    if agreed_total is not None:
+        payload["state"] = {
+            "values": {"agreed_total": {"value": {"value": agreed_total}}}
+        }
     body = f"payload={json.dumps(payload)}".encode()
     headers = _signed_headers(body, secret)
     return await client.post(
@@ -200,3 +206,55 @@ async def test_mark_paid_action_rejects_unsigned(client, session, prop, monkeypa
     assert "signed" in body["blocks"][0]["text"]["text"].lower()
     await session.refresh(res)
     assert res.status == "hold"
+
+
+async def test_approve_without_total_changes_nothing(client, session, prop, monkeypatch):
+    """A typo or an empty box must leave the reservation exactly as it was."""
+    monkeypatch.setattr(settings, "slack_signing_secret", "shh")
+    res = Reservation(property_id=prop.id, source="direct", status="inquiry",
+                      guest_name="Alice", guest_email="alice@example.com",
+                      check_in=date(2026, 9, 1), check_out=date(2026, 9, 5))
+    session.add(res)
+    await session.flush()
+
+    resp = await _post_interaction(client, "booking_approve", res.id, "shh", agreed_total="")
+    assert resp.status_code == 200
+    assert "Not approved" in resp.json()["text"] or "Not approved" in str(resp.json())
+
+    await session.refresh(res)
+    assert res.status == "inquiry"
+    assert res.agreed_total_cents is None
+    assert res.booking_token is None
+
+
+async def test_approve_rejects_a_nonsense_total(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "slack_signing_secret", "shh")
+    res = Reservation(property_id=prop.id, source="direct", status="inquiry",
+                      guest_name="Alice", guest_email="alice@example.com",
+                      check_in=date(2026, 9, 1), check_out=date(2026, 9, 5))
+    session.add(res)
+    await session.flush()
+
+    resp = await _post_interaction(client, "booking_approve", res.id, "shh", agreed_total="two grand")
+    assert resp.status_code == 200
+    await session.refresh(res)
+    assert res.status == "inquiry"
+    assert res.agreed_total_cents is None
+
+
+async def test_approve_stores_the_agreed_total(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "slack_signing_secret", "shh")
+    res = Reservation(property_id=prop.id, source="direct", status="inquiry",
+                      guest_name="Alice", guest_email="alice@example.com",
+                      check_in=date(2026, 9, 1), check_out=date(2026, 9, 5))
+    session.add(res)
+    await session.flush()
+
+    with patch("app.routes.slack_interactive.send_email"):
+        resp = await _post_interaction(
+            client, "booking_approve", res.id, "shh", agreed_total="$2,450.00"
+        )
+    assert resp.status_code == 200
+    await session.refresh(res)
+    assert res.status == "hold"
+    assert res.agreed_total_cents == 245000

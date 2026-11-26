@@ -28,6 +28,22 @@ def build_inquiry_blocks(
                 },
             },
             {
+                # An input block in the MESSAGE (not a modal): its typed value
+                # arrives in payload["state"]["values"] when a button in the
+                # same message is clicked. A modal would need views.open and
+                # therefore a bot token, which this app does not have — it
+                # posts via an incoming webhook and only verifies signatures.
+                "type": "input",
+                "block_id": "agreed_total",
+                "optional": True,
+                "label": {"type": "plain_text", "text": "Agreed total (what the guest pays, all in)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "value",
+                    "placeholder": {"type": "plain_text", "text": "e.g. 2000 or $2,000.00"},
+                },
+            },
+            {
                 "type": "actions",
                 "elements": [
                     {
@@ -155,6 +171,25 @@ def build_mark_paid_error_blocks(message: str) -> dict:
             {
                 "type": "section",
                 "text": {"type": "mrkdwn", "text": f":warning: *Could not mark paid* — {message}"},
+            }
+        ],
+    }
+
+
+def build_total_error_blocks(reason: str) -> dict:
+    """Approve was clicked with an unusable total — nothing was changed."""
+    return {
+        "text": f"Could not approve: {reason}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": (
+                        f":warning: *Not approved* — {reason}.\n"
+                        "Nothing was changed. Fix the agreed total and click Approve again."
+                    ),
+                },
             }
         ],
     }

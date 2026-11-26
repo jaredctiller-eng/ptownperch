@@ -12,6 +12,7 @@ from app.booking.availability import assert_no_overlap
 from app.booking.contract import has_unresolved_blanks, render_contract
 from app.booking.quote import compute_quote
 from app.booking.rates import resolve_nightly_rates
+from app.booking.terms import compute_terms
 from app.config import settings
 from app.db import get_session
 from app.models import Property, Reservation
@@ -94,20 +95,58 @@ async def book_thanks(request: Request):
     return templates.TemplateResponse(request, "book_thanks.html")
 
 
+def _money(cents: int) -> str:
+    return f"${cents / 100:,.2f}"
+
+
+def _long_date(d) -> str:
+    # "July 9, 2027" — a contract reads better than an ISO date, and the
+    # guest is checking these against a text thread, not a calendar API.
+    return f"{d.strftime('%B')} {d.day}, {d.year}"
+
+
 async def _quote_context(session: AsyncSession, prop: Property, reservation: Reservation) -> dict:
-    nightly_rates = await resolve_nightly_rates(
-        session, prop.id, reservation.check_in, reservation.check_out, prop.nightly_rate_cents or 0
-    )
-    quote = compute_quote(
-        nightly_rates_cents=nightly_rates,
-        tax_enabled=prop.direct_booking_tax_enabled,
-        tax_rate_percent=prop.direct_booking_tax_rate_percent,
+    """Everything the contract template may reference.
+
+    Direct bookings are priced by one flat agreed total (set at Slack
+    approval); the payment schedule derives from it in app.booking.terms.
+    `compute_quote` is NOT used here — it still serves the public /book
+    inquiry page, which quotes from nightly rates before a human has
+    negotiated anything.
+
+    A reservation with no agreed total (an Airbnb row, or a direct one
+    approved before this field existed) gets empty money strings rather
+    than a crash; the signing route refuses to render such a contract.
+    """
+    nights = (reservation.check_out - reservation.check_in).days
+    base = {
+        "guest_name": reservation.guest_name or "",
+        "guest_email": reservation.guest_email or "",
+        "guest_phone": reservation.guest_phone or "",
+        "check_in": _long_date(reservation.check_in),
+        "check_out": _long_date(reservation.check_out),
+        "check_in_iso": str(reservation.check_in),
+        "check_out_iso": str(reservation.check_out),
+        "nights": str(nights),
+    }
+
+    if reservation.agreed_total_cents is None:
+        return {**base, "total": "", "advance_payment": "", "balance": "",
+                "balance_due_date": "", "security_deposit": "",
+                "due_with_balance": "", "deposit_return_days": ""}
+
+    terms = compute_terms(
+        total_cents=reservation.agreed_total_cents, check_in=reservation.check_in
     )
     return {
-        "guest_name": reservation.guest_name or "",
-        "check_in": str(reservation.check_in),
-        "check_out": str(reservation.check_out),
-        "total": f"${quote.total_cents / 100:.2f}",
+        **base,
+        "total": _money(terms.total_cents),
+        "advance_payment": _money(terms.advance_cents),
+        "balance": _money(terms.balance_cents),
+        "balance_due_date": _long_date(terms.balance_due),
+        "security_deposit": _money(terms.security_deposit_cents),
+        "due_with_balance": _money(terms.due_with_balance_cents),
+        "deposit_return_days": str(terms.deposit_return_days),
     }
 
 
@@ -150,6 +189,15 @@ async def book_guest_page(
     # amount, etc). This must be enforced here, not just at the admin
     # template-editing endpoint, since the template can be edited at any time
     # after a booking link has already been sent out.
+    # A direct booking with no agreed total has no payment schedule, so the
+    # contract would render with blank money fields. Refuse, the same way we
+    # refuse an unresolved "[____]".
+    if reservation.agreed_total_cents is None:
+        raise HTTPException(
+            status_code=503,
+            detail="this booking has no agreed total yet — it cannot be signed",
+        )
+
     template = prop.contract_template or ""
     if has_unresolved_blanks(template):
         raise HTTPException(
