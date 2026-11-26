@@ -11,7 +11,8 @@ from app.booking.calendar_view import build_month_calendar
 from app.booking.contract import has_unresolved_blanks
 from app.config import settings
 from app.db import get_session
-from app.models import CalendarBlock, Reservation
+from app.booking.revenue import summarize_period
+from app.models import CalendarBlock, DailyRate, Reservation
 from app.routes import admin
 from app.routes.admin import _get_property_or_404
 
@@ -76,6 +77,35 @@ async def dashboard_page(
     ).scalars().all()
 
     calendar_days = build_month_calendar(view_year, view_month, list(reservations), list(blocks))
+
+    month_start = date(view_year, view_month, 1)
+    month_end = date(view_year + (view_month == 12), view_month % 12 + 1, 1)
+    year_start = date(view_year, 1, 1)
+    rates_by_date = {
+        r.date: r.rate_cents
+        for r in (
+            await session.execute(
+                select(DailyRate).where(
+                    DailyRate.property_id == prop.id,
+                    DailyRate.date >= year_start,
+                    DailyRate.date < month_end,
+                )
+            )
+        ).scalars()
+    }
+    revenue_kwargs = dict(
+        rates_by_date=rates_by_date,
+        default_rate_cents=prop.nightly_rate_cents,
+        tax_enabled=prop.direct_booking_tax_enabled,
+        tax_rate_percent=prop.direct_booking_tax_rate_percent,
+    )
+    month_summary = summarize_period(
+        list(reservations), start=month_start, end=month_end, **revenue_kwargs
+    )
+    ytd_summary = summarize_period(
+        list(reservations), start=year_start, end=month_end, **revenue_kwargs
+    )
+
     (prev_year, prev_month), (next_year, next_month) = _prev_next_month(view_year, view_month)
 
     return templates.TemplateResponse(
@@ -84,6 +114,8 @@ async def dashboard_page(
         {
             "property": prop,
             "calendar_days": calendar_days,
+            "month_summary": month_summary,
+            "ytd_summary": ytd_summary,
             "reservations": reservations,
             "year": view_year,
             "month": view_month,

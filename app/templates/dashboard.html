@@ -10,6 +10,23 @@
     <a href="/dashboard?year={{ next_year }}&month={{ next_month }}">{{ next_year }}-{{ "%02d"|format(next_month) }} &rarr;</a>
   </p>
 
+  <h2>Revenue</h2>
+  {% macro money(c) %}${{ "{:,.2f}".format(c / 100) }}{% endmacro %}
+  <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">
+    <tr><th></th><th>{{ year }}-{{ "%02d"|format(month) }}</th><th>Year to date</th></tr>
+    <tr><td>Collected (paid)</td><td>{{ money(month_summary.collected_cents) }}</td><td>{{ money(ytd_summary.collected_cents) }}</td></tr>
+    <tr><td>Outstanding (unpaid holds)</td><td>{{ money(month_summary.outstanding_cents) }}</td><td>{{ money(ytd_summary.outstanding_cents) }}</td></tr>
+    <tr><td>Direct nights</td><td>{{ month_summary.direct_nights }}</td><td>{{ ytd_summary.direct_nights }}</td></tr>
+    <tr><td>Airbnb nights</td><td>{{ month_summary.airbnb_nights }}</td><td>{{ ytd_summary.airbnb_nights }}</td></tr>
+    <tr><td>Occupancy</td><td>{{ "%.0f"|format(month_summary.occupancy_pct) }}% ({{ month_summary.occupied_nights }}/{{ month_summary.total_nights }})</td><td>{{ "%.0f"|format(ytd_summary.occupancy_pct) }}% ({{ ytd_summary.occupied_nights }}/{{ ytd_summary.total_nights }})</td></tr>
+  </table>
+  <p style="color: #555; font-size: 0.9em;">
+    Direct bookings only — Airbnb payouts aren't tracked, so Airbnb nights count toward
+    occupancy but not revenue. Amounts are estimates recomputed from current nightly rates
+    (net of the direct-booking discount{% if property.direct_booking_tax_enabled %}, plus tax{% endif %}); editing rates later changes past figures.
+    {% if ytd_summary.unpriced_nights %}<br><strong style="color: #b00020;">{{ ytd_summary.unpriced_nights }} direct night(s) this year have no rate set and are excluded.</strong>{% endif %}
+  </p>
+
   <h2>Calendar</h2>
   <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">
     <tr>
