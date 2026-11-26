@@ -114,6 +114,8 @@ async def dashboard_page(
         {
             "property": prop,
             "calendar_days": calendar_days,
+            "today": today,
+            "month_name": month_start.strftime("%B"),
             "month_summary": month_summary,
             "ytd_summary": ytd_summary,
             "reservations": reservations,

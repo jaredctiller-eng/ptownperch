@@ -1,101 +1,240 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Dashboard — {{ property.name }}</title></head>
-<body style="font-family: sans-serif; max-width: 900px; margin: 2rem auto;">
-  <h1>{{ property.name }} ({{ property.slug }})</h1>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — {{ property.name }}</title>
+<style>
+  :root {
+    --ink: #183138; --soft: #4c6065; --paper: #fffdf8; --sand: #f4eee3;
+    --garden: #285746; --garden2: #1e4638; --coral: #c9563f; --gold: #d6a535;
+    --line: rgba(24,49,56,.16); --shadow: 0 24px 70px rgba(24,49,56,.12);
+    --radius: 26px;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sand); color: var(--ink); font: 16px/1.5 var(--sans); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px 64px; }
+  header.top { background: var(--paper); border-bottom: 1px solid var(--line); }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; font-family: var(--serif); font-size: 1.25rem; }
+  .brand .mark { width: 36px; height: 36px; border: 1px solid var(--ink); border-radius: 50%; display: grid; place-items: center; font-size: 1.05rem; }
+  .brand small { font: 600 .72rem var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); margin-left: 4px; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 500; margin: 0; }
+  h2 { font-size: 1.6rem; margin: 40px 0 6px; }
+  .sub { color: var(--soft); margin: 0 0 16px; font-size: .95rem; }
+  .month-nav { display: flex; align-items: center; gap: 10px; margin: 28px 0 0; flex-wrap: wrap; }
+  .month-nav h1 { font-size: 2.4rem; flex: 1; min-width: 200px; }
+  .pill { display: inline-block; padding: 8px 16px; border: 1px solid var(--ink); border-radius: 999px; color: var(--ink); text-decoration: none; font-weight: 700; font-size: .9rem; background: var(--paper); }
+  .pill:hover { background: var(--ink); color: var(--paper); }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
 
-  <p>
-    <a href="/dashboard?year={{ prev_year }}&month={{ prev_month }}">&larr; {{ prev_year }}-{{ "%02d"|format(prev_month) }}</a>
-    &nbsp;|&nbsp; <strong>{{ year }}-{{ "%02d"|format(month) }}</strong> &nbsp;|&nbsp;
-    <a href="/dashboard?year={{ next_year }}&month={{ next_month }}">{{ next_year }}-{{ "%02d"|format(next_month) }} &rarr;</a>
-  </p>
+  /* revenue stat cards */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 14px; }
+  .stat { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; }
+  .stat .label { font: 700 .72rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+  .stat .big { font-family: var(--serif); font-size: 2.1rem; line-height: 1.15; margin: 6px 0 2px; }
+  .stat .ytd { color: var(--soft); font-size: .88rem; }
+  .stat.good .big { color: var(--garden); }
+  .stat.warn .big { color: var(--coral); }
+  .note { color: var(--soft); font-size: .85rem; margin: 14px 2px 0; }
+  .alert { color: #8a2a18; background: #fbe9e4; border: 1px solid #efc3b8; border-radius: 14px; padding: 10px 14px; margin-top: 12px; font-size: .9rem; }
+
+  /* calendar */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 14px; font-size: .85rem; color: var(--soft); }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--line); background: var(--c, #fff); }
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .dow { font: 700 .72rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); text-align: center; padding-bottom: 2px; }
+  .day { min-height: 84px; border-radius: 14px; border: 1px solid var(--line); padding: 7px 8px; background: #fff; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .day.pad { border: 0; background: transparent; }
+  .day .num { font-weight: 700; font-size: .95rem; }
+  .day .status { font-size: .72rem; font-weight: 700; letter-spacing: .02em; }
+  .day .who { font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .day.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .st-direct_hold { background: #f8ecc8; border-color: #e6cf8a; }
+  .st-direct_confirmed { background: #d5e8dc; border-color: #a9cdb8; color: var(--garden2); }
+  .st-airbnb { background: #f6dcd5; border-color: #e8b8ab; color: #8a2a18; }
+  .st-blocked { background: #e3e0d8; border-color: #cfcabd; color: var(--soft); }
+
+  /* reservations */
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th { text-align: left; font: 700 .72rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  .badge { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--sand); }
+  .badge.confirmed, .badge.checked_out { background: #d5e8dc; color: var(--garden2); }
+  .badge.hold { background: #f8ecc8; color: #7a5a0a; }
+  .badge.inquiry { background: #dfe8ee; color: #2c4a5a; }
+  .src { color: var(--soft); }
+  .empty { color: var(--soft); padding: 12px; }
+
+  /* settings */
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 14px; align-items: start; }
+  .settings h3 { font-size: 1.2rem; margin-bottom: 4px; }
+  .settings p.help { color: var(--soft); font-size: .88rem; margin: 0 0 12px; }
+  label.f { display: block; font-weight: 700; font-size: .88rem; margin-bottom: 12px; }
+  input[type=number], textarea { width: 100%; margin-top: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; background: #fff; color: var(--ink); }
+  textarea { resize: vertical; }
+  label.check { display: flex; gap: 8px; align-items: center; font-weight: 600; margin-bottom: 14px; }
+  button { font: 800 .9rem var(--sans); padding: 10px 20px; border-radius: 999px; border: 0; background: var(--coral); color: #fff; cursor: pointer; }
+  button:hover { background: #b24a35; }
+
+  @media (max-width: 640px) {
+    .month-nav h1 { font-size: 1.9rem; }
+    .cal { gap: 3px; }
+    .day { min-height: 62px; padding: 4px 5px; border-radius: 10px; }
+    .day .who { font-size: .62rem; }
+    .day .status { display: none; } /* color + legend carry the meaning on phones */
+  }
+</style>
+</head>
+<body>
+{% macro money(c) %}${{ "{:,.2f}".format(c / 100) }}{% endmacro %}
+{% set labels = {
+  "available": "",
+  "direct_hold": "Unpaid hold",
+  "direct_confirmed": "Paid",
+  "airbnb": "Airbnb",
+  "blocked": "Blocked",
+} %}
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="mark">P</span> {{ property.name }} <small>Ops dashboard</small></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="month-nav">
+    <a class="pill" href="/dashboard?year={{ prev_year }}&month={{ prev_month }}">&larr; {{ prev_year }}-{{ "%02d"|format(prev_month) }}</a>
+    <h1>{{ month_name }} {{ year }}</h1>
+    <a class="pill" href="/dashboard?year={{ next_year }}&month={{ next_month }}">{{ next_year }}-{{ "%02d"|format(next_month) }} &rarr;</a>
+  </div>
 
   <h2>Revenue</h2>
-  {% macro money(c) %}${{ "{:,.2f}".format(c / 100) }}{% endmacro %}
-  <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">
-    <tr><th></th><th>{{ year }}-{{ "%02d"|format(month) }}</th><th>Year to date</th></tr>
-    <tr><td>Collected (paid)</td><td>{{ money(month_summary.collected_cents) }}</td><td>{{ money(ytd_summary.collected_cents) }}</td></tr>
-    <tr><td>Outstanding (unpaid holds)</td><td>{{ money(month_summary.outstanding_cents) }}</td><td>{{ money(ytd_summary.outstanding_cents) }}</td></tr>
-    <tr><td>Direct nights</td><td>{{ month_summary.direct_nights }}</td><td>{{ ytd_summary.direct_nights }}</td></tr>
-    <tr><td>Airbnb nights</td><td>{{ month_summary.airbnb_nights }}</td><td>{{ ytd_summary.airbnb_nights }}</td></tr>
-    <tr><td>Occupancy</td><td>{{ "%.0f"|format(month_summary.occupancy_pct) }}% ({{ month_summary.occupied_nights }}/{{ month_summary.total_nights }})</td><td>{{ "%.0f"|format(ytd_summary.occupancy_pct) }}% ({{ ytd_summary.occupied_nights }}/{{ ytd_summary.total_nights }})</td></tr>
-  </table>
-  <p style="color: #555; font-size: 0.9em;">
-    Direct bookings only — Airbnb payouts aren't tracked, so Airbnb nights count toward
-    occupancy but not revenue. Amounts are estimates recomputed from current nightly rates
-    (net of the direct-booking discount{% if property.direct_booking_tax_enabled %}, plus tax{% endif %}); editing rates later changes past figures.
-    {% if ytd_summary.unpriced_nights %}<br><strong style="color: #b00020;">{{ ytd_summary.unpriced_nights }} direct night(s) this year have no rate set and are excluded.</strong>{% endif %}
+  <p class="sub">Direct bookings only &mdash; each card shows {{ month_name }}, with the year to date underneath.</p>
+  <div class="stats">
+    <div class="stat good">
+      <div class="label">Collected (paid)</div>
+      <div class="big">{{ money(month_summary.collected_cents) }}</div>
+      <div class="ytd">{{ money(ytd_summary.collected_cents) }} year to date</div>
+    </div>
+    <div class="stat warn">
+      <div class="label">Outstanding (unpaid holds)</div>
+      <div class="big">{{ money(month_summary.outstanding_cents) }}</div>
+      <div class="ytd">{{ money(ytd_summary.outstanding_cents) }} year to date</div>
+    </div>
+    <div class="stat">
+      <div class="label">Occupancy</div>
+      <div class="big">{{ "%.0f"|format(month_summary.occupancy_pct) }}%</div>
+      <div class="ytd">{{ month_summary.occupied_nights }} of {{ month_summary.total_nights }} nights ({{ "%.0f"|format(ytd_summary.occupancy_pct) }}% YTD)</div>
+    </div>
+    <div class="stat">
+      <div class="label">Nights booked</div>
+      <div class="big">{{ month_summary.direct_nights + month_summary.airbnb_nights }}</div>
+      <div class="ytd">{{ month_summary.direct_nights }} direct &middot; {{ month_summary.airbnb_nights }} Airbnb</div>
+    </div>
+  </div>
+  {% if ytd_summary.unpriced_nights %}
+  <div class="alert"><strong>{{ ytd_summary.unpriced_nights }} direct night(s) this year have no rate set</strong> and are left out of these totals. Set a nightly rate or upload rates below.</div>
+  {% endif %}
+  <p class="note">
+    Airbnb payouts aren't tracked, so Airbnb nights count toward occupancy but not revenue.
+    Amounts are estimates recomputed from your current nightly rates (net of the direct-booking discount{% if property.direct_booking_tax_enabled %}, plus tax{% endif %}); editing rates later changes past figures.
   </p>
 
   <h2>Calendar</h2>
-  <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">
-    <tr>
-      <th>Day</th><th>Status</th><th>Guest</th>
-    </tr>
-    {% for day in calendar_days %}
-    {% set bg = {
-      "available": "#ffffff",
-      "direct_hold": "#ffcc80",
-      "direct_confirmed": "#a5d6a7",
-      "airbnb": "#90caf9",
-      "blocked": "#bdbdbd",
-    }[day.status] %}
-    <tr style="background-color: {{ bg }};">
-      <td>{{ day.date }}</td>
-      <td>{{ day.status }}</td>
-      <td>{{ day.label or "" }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+  <p class="sub">Pending inquiries don't block dates &mdash; they're listed under Reservations until you approve them.</p>
+  <div class="card">
+    <div class="legend">
+      <span style="--c:#fff">Open</span>
+      <span style="--c:#f8ecc8">Direct &middot; unpaid hold</span>
+      <span style="--c:#d5e8dc">Direct &middot; paid</span>
+      <span style="--c:#f6dcd5">Airbnb</span>
+      <span style="--c:#e3e0d8">Blocked</span>
+    </div>
+    <div class="cal">
+      {% for d in ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] %}<div class="dow">{{ d }}</div>{% endfor %}
+      {% for _ in range((calendar_days[0].date.weekday() + 1) % 7) %}<div class="day pad"></div>{% endfor %}
+      {% for day in calendar_days %}
+      <div class="day st-{{ day.status }}{% if day.date == today %} today{% endif %}">
+        <span class="num" title="{{ day.date }}">{{ day.date.day }}</span>
+        <span class="status" data-status="{{ day.status }}">{{ labels[day.status] }}</span>
+        <span class="who">{{ day.label or "" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 
   <h2>Reservations</h2>
-  <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">
-    <tr>
-      <th>Check-in</th><th>Check-out</th><th>Source</th><th>Status</th><th>Guest</th>
-    </tr>
-    {% for r in reservations %}
-    <tr>
-      <td>{{ r.check_in }}</td>
-      <td>{{ r.check_out }}</td>
-      <td>{{ r.source }}</td>
-      <td>{{ r.status }}</td>
-      <td>{{ r.guest_name or "" }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+  <p class="sub"><strong>inquiry</strong> = waiting for your approval &middot; <strong>hold</strong> = approved, waiting on payment (expires after 48h) &middot; <strong>confirmed</strong> = paid.</p>
+  <div class="card tablewrap">
+    {% if reservations %}
+    <table>
+      <tr><th>Guest</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Source</th><th>Status</th></tr>
+      {% for r in reservations %}
+      <tr>
+        <td>{{ r.guest_name or "—" }}</td>
+        <td>{{ r.check_in }}</td>
+        <td>{{ r.check_out }}</td>
+        <td>{{ (r.check_out - r.check_in).days }}</td>
+        <td class="src">{{ "Airbnb" if r.source == "airbnb_ical" else "Direct" }}</td>
+        <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty">No reservations yet.</div>
+    {% endif %}
+  </div>
 
-  <h2>Config</h2>
-  <form method="post" action="/dashboard/config">
-    <input type="hidden" name="year" value="{{ year }}">
-    <input type="hidden" name="month" value="{{ month }}">
-    <p><label>Nightly rate ($)
-      <input type="number" step="0.01" name="nightly_rate_dollars"
-             value="{{ (property.nightly_rate_cents / 100) if property.nightly_rate_cents is not none else '' }}">
-    </label></p>
-    <p><label>
-      <input type="checkbox" name="direct_booking_tax_enabled" {% if property.direct_booking_tax_enabled %}checked{% endif %}>
-      Direct booking tax enabled
-    </label></p>
-    <p><button type="submit">Save config</button></p>
-  </form>
+  <h2>Settings</h2>
+  <div class="settings">
+    <div class="card">
+      <h3>Pricing</h3>
+      <p class="help">The default nightly rate is used for any date without its own rate below.</p>
+      <form method="post" action="/dashboard/config">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="month" value="{{ month }}">
+        <label class="f">Nightly rate ($)
+          <input type="number" step="0.01" name="nightly_rate_dollars"
+                 value="{{ (property.nightly_rate_cents / 100) if property.nightly_rate_cents is not none else '' }}">
+        </label>
+        <label class="check">
+          <input type="checkbox" name="direct_booking_tax_enabled" {% if property.direct_booking_tax_enabled %}checked{% endif %}>
+          Charge tax on direct bookings
+        </label>
+        <button type="submit">Save pricing</button>
+      </form>
+    </div>
 
-  <h2>Contract template</h2>
-  {% if has_unresolved_blanks %}
-    <p style="color: #b00020;"><strong>Warning:</strong> template has unresolved blanks (e.g. "[____]").</p>
-  {% endif %}
-  <form method="post" action="/dashboard/contract-template">
-    <input type="hidden" name="year" value="{{ year }}">
-    <input type="hidden" name="month" value="{{ month }}">
-    <p><textarea name="template" rows="10" cols="70">{{ property.contract_template or "" }}</textarea></p>
-    <p><button type="submit">Save template</button></p>
-  </form>
+    <div class="card">
+      <h3>Per-night rates</h3>
+      <p class="help">One per line as <code>YYYY-MM-DD,dollars</code> &mdash; e.g. paste a month of Airbnb prices.</p>
+      <form method="post" action="/dashboard/rates">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="month" value="{{ month }}">
+        <label class="f"><textarea name="rates_text" rows="6" placeholder="2026-10-01,650&#10;2026-10-02,700"></textarea></label>
+        <button type="submit">Save rates</button>
+      </form>
+    </div>
 
-  <h2>Bulk rates</h2>
-  <form method="post" action="/dashboard/rates">
-    <input type="hidden" name="year" value="{{ year }}">
-    <input type="hidden" name="month" value="{{ month }}">
-    <p><textarea name="rates_text" rows="6" cols="40" placeholder="YYYY-MM-DD,dollars&#10;2026-10-01,650"></textarea></p>
-    <p><button type="submit">Save rates</button></p>
-  </form>
+    <div class="card">
+      <h3>Rental agreement</h3>
+      <p class="help">Guests sign this. It can't be shown to guests while any <code>[____]</code> blank is left in it.</p>
+      {% if has_unresolved_blanks %}
+        <div class="alert" style="margin: 0 0 12px;"><strong>Heads up:</strong> the template still has unresolved blanks like "[____]".</div>
+      {% endif %}
+      <form method="post" action="/dashboard/contract-template">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="month" value="{{ month }}">
+        <label class="f"><textarea name="template" rows="10">{{ property.contract_template or "" }}</textarea></label>
+        <button type="submit">Save agreement</button>
+      </form>
+    </div>
+  </div>
+</main>
 </body>
 </html>
