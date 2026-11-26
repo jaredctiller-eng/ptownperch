@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from app.booking.quote import compute_quote
 from app.models import Reservation
 
 # Reservations that occupy the property. Inquiries and cancellations don't.
@@ -31,21 +30,17 @@ def _nights_in_period(r: Reservation, start: date, end: date) -> list[date]:
 
 
 def summarize_period(
-    reservations: list[Reservation],
-    *,
-    rates_by_date: dict[date, int],
-    default_rate_cents: int | None,
-    tax_enabled: bool,
-    tax_rate_percent: float,
-    start: date,
-    end: date,
+    reservations: list[Reservation], *, start: date, end: date
 ) -> PeriodSummary:
-    """Estimate revenue and occupancy for nights in [start, end).
+    """Revenue and occupancy for nights in [start, end).
 
-    Reservations don't store a price, so direct revenue is recomputed from the
-    *current* nightly rates through the quote engine; it can drift if rates
-    were edited after a booking. Airbnb (iCal) bookings carry no price and
-    count toward occupancy only.
+    A direct booking's price is the flat total agreed with the guest
+    (Reservation.agreed_total_cents, tax-inclusive, cleaning fee folded in;
+    the refundable security deposit is not revenue and is excluded). A stay
+    that straddles the period boundary contributes its total prorated by
+    nights, rounded half-up. Airbnb (iCal) bookings carry no price and count
+    toward occupancy only. A direct stay with no agreed total is counted in
+    ``unpriced_nights`` rather than silently treated as zero.
     """
     collected = outstanding = unpriced = 0
     direct_nights = airbnb_nights = 0
@@ -66,22 +61,15 @@ def summarize_period(
             continue
 
         direct_nights += len(nights)
-        rates = []
-        for n in nights:
-            rate = rates_by_date.get(n, default_rate_cents)
-            if rate is None:
-                unpriced += 1
-            else:
-                rates.append(rate)
-        if not rates:
+        if r.agreed_total_cents is None:
+            unpriced += len(nights)
             continue
-        total = compute_quote(
-            nightly_rates_cents=rates, tax_enabled=tax_enabled, tax_rate_percent=tax_rate_percent
-        ).total_cents
+        stay_nights = (r.check_out - r.check_in).days
+        share = (r.agreed_total_cents * len(nights) * 2 + stay_nights) // (stay_nights * 2)
         if r.status in _COLLECTED:
-            collected += total
+            collected += share
         else:
-            outstanding += total
+            outstanding += share
 
     return PeriodSummary(
         collected_cents=collected,
