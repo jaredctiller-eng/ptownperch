@@ -138,11 +138,11 @@
     </div>
   </div>
   {% if ytd_summary.unpriced_nights %}
-  <div class="alert"><strong>{{ ytd_summary.unpriced_nights }} direct night(s) this year have no rate set</strong> and are left out of these totals. Set a nightly rate or upload rates below.</div>
+  <div class="alert"><strong>{{ ytd_summary.unpriced_nights }} direct night(s) this year have no agreed total</strong> and are left out of these totals. Enter the total when approving the inquiry in Slack.</div>
   {% endif %}
   <p class="note">
     Airbnb payouts aren't tracked, so Airbnb nights count toward occupancy but not revenue.
-    Amounts are estimates recomputed from your current nightly rates (net of the direct-booking discount{% if property.direct_booking_tax_enabled %}, plus tax{% endif %}); editing rates later changes past figures.
+    Amounts are the agreed totals (tax-inclusive, cleaning fee included, security deposit excluded); a stay spanning two months is split by nights.
   </p>
 
   <h2>Calendar</h2>
