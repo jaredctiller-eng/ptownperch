@@ -219,3 +219,85 @@ async def test_dashboard_has_no_settings_section_but_links_contract(client, prop
     body = (await client.get("/dashboard", auth=AUTH)).text
     assert "<h2>Settings</h2>" not in body
     assert 'href="/dashboard/contract"' in body
+
+
+# --- contract preview -------------------------------------------------------
+
+async def test_contract_preview_requires_auth(client, prop):
+    resp = await client.get("/dashboard/contract/preview")
+    assert resp.status_code in (401, 503)
+
+
+async def test_contract_preview_renders_with_sample_values(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_user", "ops")
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    prop.contract_template = "Agreement for {{ guest_name }}, total {{ total }}."
+    await session.flush()
+
+    resp = await client.get("/dashboard/contract/preview", auth=AUTH)
+    assert resp.status_code == 200
+    body = resp.content.decode()
+    assert "Agreement for Sample Guest" in body
+    assert "PREVIEW" in body
+    # the guest signing form must not be reachable from a preview
+    assert "sig-pad" not in body
+    assert 'action="/book/preview/sign"' not in body
+
+
+async def test_contract_preview_reports_a_bad_variable_instead_of_500(
+    client, session, prop, monkeypatch
+):
+    """A name the app does not pass would 503 for a real guest. The preview
+    is where that must surface, with the offending name visible."""
+    monkeypatch.setattr(settings, "admin_user", "ops")
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    prop.contract_template = "Hello {{ guest_name }}, rate {{ nightly_rate }}."
+    await session.flush()
+
+    resp = await client.get("/dashboard/contract/preview", auth=AUTH)
+    assert resp.status_code == 200
+    body = resp.content.decode()
+    assert "will not render for a guest" in body
+    assert "nightly_rate" in body
+
+
+async def test_contract_preview_flags_square_bracket_blanks(
+    client, session, prop, monkeypatch
+):
+    monkeypatch.setattr(settings, "admin_user", "ops")
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    prop.contract_template = "Deposit of [____] is due."
+    await session.flush()
+
+    resp = await client.get("/dashboard/contract/preview", auth=AUTH)
+    assert resp.status_code == 200
+    assert "square-bracket blank" in resp.content.decode()
+
+
+async def test_contract_preview_handles_no_template(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_user", "ops")
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    prop.contract_template = ""
+    await session.flush()
+
+    resp = await client.get("/dashboard/contract/preview", auth=AUTH)
+    assert resp.status_code == 200
+    assert "No agreement has been saved yet" in resp.content.decode()
+
+
+async def test_preview_context_matches_the_real_signing_context(client, session, prop):
+    """The preview must pass exactly the keys the guest path passes. A key
+    here but not there lets a template pass preview and fail for a guest."""
+    from app.routes.booking_public import _quote_context
+    from app.routes.dashboard import _preview_context
+
+    res = Reservation(
+        property_id=prop.id, source="direct", status="hold", guest_name="Alice",
+        check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+        agreed_total_cents=200000, booking_token="tok-ctx",
+    )
+    session.add(res)
+    await session.flush()
+
+    real = await _quote_context(session, prop, res)
+    assert set(_preview_context()) == set(real)

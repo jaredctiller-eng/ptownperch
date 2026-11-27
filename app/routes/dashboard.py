@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin_auth import require_admin
 from app.booking.calendar_view import build_month_calendar
-from app.booking.contract import has_unresolved_blanks
+from app.booking.contract import has_unresolved_blanks, render_contract
 from app.booking.revenue import summarize_period
+from app.booking.terms import compute_terms
 from app.config import settings
 from app.db import get_session
 from app.models import CalendarBlock, Reservation
@@ -182,6 +183,97 @@ async def contract_page(
             "property": prop,
             "has_unresolved_blanks": has_unresolved_blanks(prop.contract_template or ""),
             "property_slug": property_slug,
+        },
+    )
+
+
+# A fixed, obviously-fake booking so the preview is identical every time and
+# can never be mistaken for a real one. Dates are far enough out that the
+# balance date is unambiguous.
+_PREVIEW_CHECK_IN = date(2027, 7, 9)
+_PREVIEW_CHECK_OUT = date(2027, 7, 13)
+_PREVIEW_TOTAL_CENTS = 203_721
+
+
+def _preview_context() -> dict[str, str]:
+    """Sample values matching the keys _quote_context passes at sign time.
+
+    Kept deliberately in step with app/routes/booking_public.py: a key that
+    exists here but not there would let a template pass preview and then fail
+    for a real guest.
+    """
+    terms = compute_terms(total_cents=_PREVIEW_TOTAL_CENTS, check_in=_PREVIEW_CHECK_IN)
+
+    def money(cents: int) -> str:
+        return f"${cents / 100:,.2f}"
+
+    def long(d: date) -> str:
+        return f"{d.strftime('%B')} {d.day}, {d.year}"
+
+    return {
+        "guest_name": "Sample Guest",
+        "guest_email": "sample.guest@example.com",
+        "guest_phone": "508-555-0147",
+        "check_in": long(_PREVIEW_CHECK_IN),
+        "check_out": long(_PREVIEW_CHECK_OUT),
+        "check_in_iso": str(_PREVIEW_CHECK_IN),
+        "check_out_iso": str(_PREVIEW_CHECK_OUT),
+        "nights": str((_PREVIEW_CHECK_OUT - _PREVIEW_CHECK_IN).days),
+        "total": money(terms.total_cents),
+        "advance_payment": money(terms.advance_cents),
+        "balance": money(terms.balance_cents),
+        "balance_due_date": long(terms.balance_due),
+        "security_deposit": money(terms.security_deposit_cents),
+        "due_with_balance": money(terms.due_with_balance_cents),
+        "deposit_return_days": str(terms.deposit_return_days),
+    }
+
+
+@router.get("/contract/preview", response_class=HTMLResponse)
+async def contract_preview(
+    request: Request,
+    property_slug: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    """The saved agreement as a guest would see it, with sample values.
+
+    Renders through the real guest template, so what you see here is what the
+    booking page produces. A template that raises here would have 503'd for a
+    guest; the error is shown rather than raised so the editor can fix it.
+    """
+    prop = await _get_property_or_404(session, property_slug or settings.property_slug)
+    template = prop.contract_template or ""
+    ctx = _preview_context()
+
+    error: str | None = None
+    if not template.strip():
+        error = "No agreement has been saved yet."
+    elif has_unresolved_blanks(template):
+        error = (
+            "The agreement still contains a square-bracket blank. Square brackets "
+            "are not allowed anywhere in it, including in prose."
+        )
+    else:
+        try:
+            ctx["contract_text"] = render_contract(template, ctx)
+        except Exception as exc:  # noqa: BLE001 - surfaced to the editor verbatim
+            error = f"{type(exc).__name__}: {exc}"
+
+    if error is not None:
+        ctx["contract_text"] = ""
+
+    return templates.TemplateResponse(
+        request,
+        "book_guest.html",
+        {
+            **ctx,
+            "signed": False,
+            "token": "preview",
+            "preview": True,
+            "preview_error": error,
+            "preview_back": f"/dashboard/contract?property_slug={property_slug}"
+            if property_slug
+            else "/dashboard/contract",
         },
     )
 
