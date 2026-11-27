@@ -331,3 +331,63 @@ async def test_guest_page_shows_the_payment_schedule(client, session, prop):
     assert "$1,000.00" in body           # advance, and the balance
     assert "Due at booking" in body
     assert "August 2, 2026" in body      # balance due, 30 days before check-in
+
+
+async def test_signed_page_shows_the_signature_image(client, session, prop):
+    """A printed copy of a signed agreement must carry the signature, not
+    just a typed name."""
+    png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
+    res = Reservation(
+        property_id=prop.id, source="direct", status="confirmed", guest_name="Alice",
+        check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+        agreed_total_cents=200000, booking_token="tok-sig",
+        contract_snapshot="Signed agreement text", signed_name="Alice Example",
+        signed_at=datetime(2026, 8, 1, tzinfo=UTC), signature_image=png,
+    )
+    session.add(res)
+    await session.flush()
+
+    resp = await client.get("/book/tok-sig")
+    assert resp.status_code == 200
+    body = resp.content.decode()
+    assert png in body
+    assert "Alice Example" in body
+
+
+async def test_guest_page_offers_a_pdf_copy(client, session, prop):
+    prop.contract_template = "Agreement for {{ guest_name }}"
+    res = Reservation(
+        property_id=prop.id, source="direct", status="hold", guest_name="Alice",
+        check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+        agreed_total_cents=200000, booking_token="tok-pdf",
+    )
+    session.add(res)
+    await session.flush()
+
+    resp = await client.get("/book/tok-pdf")
+    body = resp.content.decode()
+    assert "window.print()" in body
+    assert "@media print" in body
+    # the signing form and any preview chrome must not appear in the printed copy
+    assert "no-print" in body
+
+
+async def test_sign_rejects_a_non_png_signature(client, session, prop):
+    """signature_image is rendered back into an <img> on the signed page, so
+    only what the canvas produces is accepted."""
+    prop.contract_template = "Agreement for {{ guest_name }}"
+    res = Reservation(
+        property_id=prop.id, source="direct", status="hold", guest_name="Alice",
+        check_in=date(2026, 9, 1), check_out=date(2026, 9, 5),
+        agreed_total_cents=200000, booking_token="tok-badsig",
+    )
+    session.add(res)
+    await session.flush()
+
+    resp = await client.post("/book/tok-badsig/sign", data={
+        "signed_name": "Alice", "guest_home_address": "1 Main St",
+        "occupant_names": "Alice", "signature_image": "data:image/svg+xml,<svg/>",
+    })
+    assert resp.status_code == 400
+    await session.refresh(res)
+    assert res.signed_at is None

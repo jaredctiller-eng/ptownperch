@@ -301,3 +301,41 @@ async def test_preview_context_matches_the_real_signing_context(client, session,
 
     real = await _quote_context(session, prop, res)
     assert set(_preview_context()) == set(real)
+
+
+# --- load the standard agreement from the repo ------------------------------
+
+async def test_load_standard_requires_auth(client, prop):
+    resp = await client.post("/dashboard/contract-template/load-standard", data={})
+    assert resp.status_code in (401, 503)
+
+
+async def test_load_standard_installs_the_repo_agreement(
+    client, session, prop, monkeypatch
+):
+    monkeypatch.setattr(settings, "admin_user", "ops")
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    prop.contract_template = "something old"
+    await session.flush()
+
+    resp = await client.post(
+        "/dashboard/contract-template/load-standard", data={}, auth=AUTH,
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    await session.refresh(prop)
+    assert prop.contract_template.lstrip().startswith("<header")
+    assert "{{ guest_name }}" in prop.contract_template
+
+
+async def test_the_repo_agreement_is_actually_usable(client, session, prop, monkeypatch):
+    """The shipped file must pass the gate and render — otherwise the button
+    installs a contract that 503s every guest."""
+    from app.booking.contract import has_unresolved_blanks, render_contract
+    from app.routes.dashboard import STANDARD_AGREEMENT_PATH, _preview_context
+
+    template = STANDARD_AGREEMENT_PATH.read_text(encoding="utf-8")
+    assert not has_unresolved_blanks(template)
+    rendered = render_contract(template, _preview_context())
+    assert "{{" not in rendered

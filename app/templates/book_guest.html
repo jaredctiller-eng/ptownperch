@@ -435,12 +435,47 @@ tr.dep td{border-top:1px solid var(--hair);color:var(--soft);font-size:13px;padd
   .booking-head + .sheet{border-radius:0}
   .signbox{margin:0;border-radius:0;padding:0 22px 40px}
 }
+/* ---------- print / save as PDF ---------- */
+@page{margin:14mm 13mm 16mm}
+@media print{
+  html,body{background:#fff}
+  body{font-size:10.5pt;line-height:1.5}
+  .no-print{display:none !important}
+  .booking-head{
+    margin:0;border-radius:0;padding:20px 0 18px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .sheet,.signbox{
+    max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;
+  }
+  .card,.risk,.brand-mark,.paynote,.signed-note{
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .doctitle{font-size:24pt}
+  h2{font-size:13pt;margin-top:20pt}
+  a{color:inherit;text-decoration:none}
+  /* never split these across a page */
+  .card,.risk,table,.initials,.signatures,.sig-record{page-break-inside:avoid}
+  h2,h3{page-break-after:avoid}
+}
+
+/* ---------- signature record ---------- */
+.sig-record{
+  background:var(--sand);border-radius:16px;padding:20px 22px;margin:0 0 10px;
+}
+.sig-record img{
+  display:block;max-width:360px;width:100%;height:auto;
+  background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px;margin:10px 0 12px;
+}
+.sig-record .meta{font-size:13px;color:var(--soft);line-height:1.7}
+.sig-record .meta strong{color:var(--ink)}
+
 </style>
 </head>
 <body>
 
 {% if preview %}
-<div style="background:var(--coral);color:#fff;padding:12px 20px;font-size:13.5px;
+<div class="no-print" style="background:var(--coral);color:#fff;padding:12px 20px;font-size:13.5px;
             font-weight:700;letter-spacing:.3px;text-align:center">
   PREVIEW — sample values, not a real booking.
   <a href="{{ preview_back }}" style="color:#fff;margin-left:10px">Back to editing</a>
@@ -494,11 +529,18 @@ tr.dep td{border-top:1px solid var(--hair);color:var(--soft);font-size:13px;padd
   <p class="lede">A guest signs here. The form is not shown in preview.</p>
 {% elif signed %}
   <h2>Signed</h2>
-  <p class="signed-note">Signed by <strong>{{ signed_name }}</strong> on {{ signed_at }}. Thank you — we will be in touch with payment details.</p>
+  <div class="sig-record">
+    {% if signature_image %}<img src="{{ signature_image }}" alt="Signature of {{ signed_name }}">{% endif %}
+    <div class="meta">
+      Signed by <strong>{{ signed_name }}</strong><br>
+      {{ signed_at }}
+    </div>
+  </div>
+  <p class="lede no-print">Keep a copy for your records using the button below. We will be in touch with payment details separately.</p>
 {% else %}
   <h2>Review and sign</h2>
   <p class="lede">By signing you agree to every term above, including Sections 13 and 17.</p>
-  <form method="post" action="/book/{{ token }}/sign" id="sign-form">
+  <form class="no-print" method="post" action="/book/{{ token }}/sign" id="sign-form">
     <label class="f"><span>Full legal name</span><input type="text" name="signed_name" required></label>
     <label class="f"><span>Home address</span><input type="text" name="guest_home_address" required></label>
     <label class="f"><span>Occupant names (comma-separated, 4 maximum)</span><input type="text" name="occupant_names" required></label>
@@ -547,6 +589,9 @@ tr.dep td{border-top:1px solid var(--hair);color:var(--soft);font-size:13px;padd
   })();
   </script>
 {% endif %}
+  <p class="no-print" style="margin-top:22px">
+    <button type="button" class="btn btn-ghost" onclick="window.print()">Save a PDF copy</button>
+  </p>
 </div>
 
 </body>
