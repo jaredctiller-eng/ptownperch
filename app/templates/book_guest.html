@@ -412,7 +412,7 @@ tr.dep td{border-top:1px solid var(--hair);color:var(--soft);font-size:13px;padd
   padding:11px 13px;
 }
 .f input:focus{outline:2px solid var(--garden);outline-offset:1px;border-color:var(--garden)}
-{% if not signed %}
+{% if not signed and not preview %}
 #sig-pad{
   width:100%;max-width:500px;height:200px;border:1px solid var(--line);
   border-radius:12px;background:var(--paper);touch-action:none;display:block;
@@ -438,6 +438,20 @@ tr.dep td{border-top:1px solid var(--hair);color:var(--soft);font-size:13px;padd
 </style>
 </head>
 <body>
+
+{% if preview %}
+<div style="background:var(--coral);color:#fff;padding:12px 20px;font-size:13.5px;
+            font-weight:700;letter-spacing:.3px;text-align:center">
+  PREVIEW — sample values, not a real booking.
+  <a href="{{ preview_back }}" style="color:#fff;margin-left:10px">Back to editing</a>
+</div>
+{% if preview_error %}
+<div style="max-width:46rem;margin:20px auto 0;background:#fbe9e4;border:1px solid #efc3b8;
+            color:#8a2a18;border-radius:14px;padding:14px 18px;font-size:14px;line-height:1.6">
+  <strong>This agreement will not render for a guest.</strong><br>{{ preview_error }}
+</div>
+{% endif %}
+{% endif %}
 
 <header class="booking-head">
   <p class="eyebrow">Ptown Perch · 220 Commercial Street, Unit 3</p>
@@ -475,7 +489,10 @@ tr.dep td{border-top:1px solid var(--hair);color:var(--soft);font-size:13px;padd
 </div>
 
 <div class="signbox">
-{% if signed %}
+{% if preview %}
+  <h2>Signature</h2>
+  <p class="lede">A guest signs here. The form is not shown in preview.</p>
+{% elif signed %}
   <h2>Signed</h2>
   <p class="signed-note">Signed by <strong>{{ signed_name }}</strong> on {{ signed_at }}. Thank you — we will be in touch with payment details.</p>
 {% else %}

@@ -116,6 +116,8 @@
       <label class="f"><textarea name="template" rows="32" style="font-family: ui-monospace, Menlo, monospace; font-size: .85rem;">{{ property.contract_template or "" }}</textarea></label>
       <p class="help">Fill-in values, written like <code>{{ "{{ guest_name }}" }}</code>: guest_name, guest_email, guest_phone, check_in, check_out, check_in_iso, check_out_iso, nights, total, advance_payment, balance, balance_due_date, security_deposit, due_with_balance, deposit_return_days. Any other name makes the guest page fail.</p>
       <button type="submit">Save agreement</button>
+      <a class="pill" href="/dashboard/contract/preview{% if property_slug %}?property_slug={{ property_slug }}{% endif %}"
+         target="_blank" rel="noopener" style="margin-left:10px">Preview as a guest &rarr;</a>
     </form>
   </div>
 </main>
