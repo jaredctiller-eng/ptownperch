@@ -1,5 +1,6 @@
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -12,6 +13,14 @@ from app.booking.calendar_view import build_month_calendar
 from app.booking.contract import has_unresolved_blanks, render_contract
 from app.booking.revenue import summarize_period
 from app.booking.terms import compute_terms
+
+# The canonical agreement, versioned in the repo so an edit is a PR rather
+# than a paste into a textarea. Copying HTML out of a browser silently
+# strips its tags, which is exactly how a plain-text contract once ended up
+# in the database; loading from here removes that whole class of mistake.
+STANDARD_AGREEMENT_PATH = (
+    Path(__file__).resolve().parents[2] / "docs" / "contract-template.html"
+)
 from app.config import settings
 from app.db import get_session
 from app.models import CalendarBlock, Reservation
@@ -227,6 +236,20 @@ def _preview_context() -> dict[str, str]:
         "due_with_balance": money(terms.due_with_balance_cents),
         "deposit_return_days": str(terms.deposit_return_days),
     }
+
+
+@router.post("/contract-template/load-standard")
+async def load_standard_agreement(
+    property_slug: str | None = Form(None),
+    session: AsyncSession = Depends(get_session),
+):
+    """Replace the saved agreement with the one versioned in the repo."""
+    template = STANDARD_AGREEMENT_PATH.read_text(encoding="utf-8")
+    await admin.update_contract_template(
+        admin.ContractTemplateUpdate(template=template), property_slug, session
+    )
+    suffix = f"?property_slug={property_slug}" if property_slug else ""
+    return RedirectResponse(url=f"/dashboard/contract{suffix}", status_code=303)
 
 
 @router.get("/contract/preview", response_class=HTMLResponse)

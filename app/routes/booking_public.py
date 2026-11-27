@@ -13,6 +13,13 @@ from app.booking.contract import has_unresolved_blanks, render_contract
 from app.booking.quote import compute_quote
 from app.booking.rates import resolve_nightly_rates
 from app.booking.terms import compute_terms
+
+# The signature is drawn into a canvas and submitted as a data URL, then
+# rendered back into an <img> on the signed page. Accept only what the pad
+# actually produces: anything else is either a broken client or someone
+# putting arbitrary content where an image is displayed.
+SIGNATURE_PREFIX = "data:image/png;base64,"
+MAX_SIGNATURE_CHARS = 2_000_000  # ~1.5 MB decoded; a 500x200 pad is far smaller
 from app.config import settings
 from app.db import get_session
 from app.models import Property, Reservation
@@ -180,6 +187,9 @@ async def book_guest_page(
                 "contract_text": reservation.contract_snapshot,
                 "signed_name": reservation.signed_name,
                 "signed_at": reservation.signed_at,
+                # the drawn signature is part of the record; without it a
+                # printed copy shows only a typed name
+                "signature_image": reservation.signature_image,
                 **(await _quote_context(session, prop, reservation)),
             },
         )
@@ -260,6 +270,11 @@ async def book_guest_sign(
             status_code=503,
             detail="contract template has an error — contact the operator",
         ) from None
+
+    if not signature_image.startswith(SIGNATURE_PREFIX):
+        raise HTTPException(status_code=400, detail="signature must be a PNG drawn on this page")
+    if len(signature_image) > MAX_SIGNATURE_CHARS:
+        raise HTTPException(status_code=413, detail="signature image is too large")
 
     reservation.signed_name = signed_name
     reservation.guest_home_address = guest_home_address

@@ -109,6 +109,19 @@
   {% elif not property.contract_template %}
   <div class="alert"><strong>No agreement loaded yet.</strong> Guests can't open their booking link until one is saved.</div>
   {% endif %}
+  <div class="card" style="margin-bottom:16px">
+    <h3 style="font-size:1.1rem">Load the standard agreement</h3>
+    <p class="help">Replaces whatever is below with the version kept in the repository
+    (<code>docs/contract-template.html</code>). Use this rather than copying the file by hand —
+    copying HTML out of a browser strips its tags and the contract renders as a wall of text.
+    Agreements already signed are unaffected.</p>
+    <form method="post" action="/dashboard/contract-template/load-standard"
+          onsubmit="return confirm('Replace the agreement below with the standard one from the repository?')">
+      {% if property_slug %}<input type="hidden" name="property_slug" value="{{ property_slug }}">{% endif %}
+      <button type="submit">Load standard agreement</button>
+    </form>
+  </div>
+
   <div class="card">
     <form method="post" action="/dashboard/contract-template">
       <input type="hidden" name="return_to" value="contract">
