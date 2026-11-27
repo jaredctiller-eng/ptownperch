@@ -106,6 +106,7 @@
 <header class="top">
   <div class="wrap">
     <div class="brand"><span class="mark">P</span> {{ property.name }} <small>Ops dashboard</small></div>
+    <a class="pill" href="/dashboard/contract">Rental agreement</a>
   </div>
 </header>
 
@@ -204,52 +205,6 @@
     {% else %}
     <div class="empty">No reservations yet.</div>
     {% endif %}
-  </div>
-
-  <h2>Settings</h2>
-  <div class="settings">
-    <div class="card">
-      <h3>Pricing</h3>
-      <p class="help">The default nightly rate is used for any date without its own rate below.</p>
-      <form method="post" action="/dashboard/config">
-        <input type="hidden" name="year" value="{{ year }}">
-        <input type="hidden" name="month" value="{{ month }}">
-        <label class="f">Nightly rate ($)
-          <input type="number" step="0.01" name="nightly_rate_dollars"
-                 value="{{ (property.nightly_rate_cents / 100) if property.nightly_rate_cents is not none else '' }}">
-        </label>
-        <label class="check">
-          <input type="checkbox" name="direct_booking_tax_enabled" {% if property.direct_booking_tax_enabled %}checked{% endif %}>
-          Charge tax on direct bookings
-        </label>
-        <button type="submit">Save pricing</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h3>Per-night rates</h3>
-      <p class="help">One per line as <code>YYYY-MM-DD,dollars</code> &mdash; e.g. paste a month of Airbnb prices.</p>
-      <form method="post" action="/dashboard/rates">
-        <input type="hidden" name="year" value="{{ year }}">
-        <input type="hidden" name="month" value="{{ month }}">
-        <label class="f"><textarea name="rates_text" rows="6" placeholder="2026-10-01,650&#10;2026-10-02,700"></textarea></label>
-        <button type="submit">Save rates</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h3>Rental agreement</h3>
-      <p class="help">Guests sign this. It can't be shown to guests while any <code>[____]</code> blank is left in it.</p>
-      {% if has_unresolved_blanks %}
-        <div class="alert" style="margin: 0 0 12px;"><strong>Heads up:</strong> the template still has unresolved blanks like "[____]".</div>
-      {% endif %}
-      <form method="post" action="/dashboard/contract-template">
-        <input type="hidden" name="year" value="{{ year }}">
-        <input type="hidden" name="month" value="{{ month }}">
-        <label class="f"><textarea name="template" rows="10">{{ property.contract_template or "" }}</textarea></label>
-        <button type="submit">Save agreement</button>
-      </form>
-    </div>
   </div>
 </main>
 </body>

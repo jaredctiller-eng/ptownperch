@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rental agreement</title>
+<style>
+  :root {
+    --ink: #183138; --soft: #4c6065; --paper: #fffdf8; --sand: #f4eee3;
+    --garden: #285746; --garden2: #1e4638; --coral: #c9563f; --gold: #d6a535;
+    --line: rgba(24,49,56,.16); --shadow: 0 24px 70px rgba(24,49,56,.12);
+    --radius: 26px;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sand); color: var(--ink); font: 16px/1.5 var(--sans); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px 64px; }
+  header.top { background: var(--paper); border-bottom: 1px solid var(--line); }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; font-family: var(--serif); font-size: 1.25rem; }
+  .brand .mark { width: 36px; height: 36px; border: 1px solid var(--ink); border-radius: 50%; display: grid; place-items: center; font-size: 1.05rem; }
+  .brand small { font: 600 .72rem var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); margin-left: 4px; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 500; margin: 0; }
+  h2 { font-size: 1.6rem; margin: 40px 0 6px; }
+  .sub { color: var(--soft); margin: 0 0 16px; font-size: .95rem; }
+  .month-nav { display: flex; align-items: center; gap: 10px; margin: 28px 0 0; flex-wrap: wrap; }
+  .month-nav h1 { font-size: 2.4rem; flex: 1; min-width: 200px; }
+  .pill { display: inline-block; padding: 8px 16px; border: 1px solid var(--ink); border-radius: 999px; color: var(--ink); text-decoration: none; font-weight: 700; font-size: .9rem; background: var(--paper); }
+  .pill:hover { background: var(--ink); color: var(--paper); }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+
+  /* revenue stat cards */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 14px; }
+  .stat { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; }
+  .stat .label { font: 700 .72rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+  .stat .big { font-family: var(--serif); font-size: 2.1rem; line-height: 1.15; margin: 6px 0 2px; }
+  .stat .ytd { color: var(--soft); font-size: .88rem; }
+  .stat.good .big { color: var(--garden); }
+  .stat.warn .big { color: var(--coral); }
+  .note { color: var(--soft); font-size: .85rem; margin: 14px 2px 0; }
+  .alert { color: #8a2a18; background: #fbe9e4; border: 1px solid #efc3b8; border-radius: 14px; padding: 10px 14px; margin-top: 12px; font-size: .9rem; }
+
+  /* calendar */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 14px; font-size: .85rem; color: var(--soft); }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--line); background: var(--c, #fff); }
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .dow { font: 700 .72rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); text-align: center; padding-bottom: 2px; }
+  .day { min-height: 84px; border-radius: 14px; border: 1px solid var(--line); padding: 7px 8px; background: #fff; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .day.pad { border: 0; background: transparent; }
+  .day .num { font-weight: 700; font-size: .95rem; }
+  .day .status { font-size: .72rem; font-weight: 700; letter-spacing: .02em; }
+  .day .who { font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .day.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .st-direct_hold { background: #f8ecc8; border-color: #e6cf8a; }
+  .st-direct_confirmed { background: #d5e8dc; border-color: #a9cdb8; color: var(--garden2); }
+  .st-airbnb { background: #f6dcd5; border-color: #e8b8ab; color: #8a2a18; }
+  .st-blocked { background: #e3e0d8; border-color: #cfcabd; color: var(--soft); }
+
+  /* reservations */
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th { text-align: left; font: 700 .72rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  .badge { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--sand); }
+  .badge.confirmed, .badge.checked_out { background: #d5e8dc; color: var(--garden2); }
+  .badge.hold { background: #f8ecc8; color: #7a5a0a; }
+  .badge.inquiry { background: #dfe8ee; color: #2c4a5a; }
+  .src { color: var(--soft); }
+  .payout { display: flex; gap: 6px; align-items: center; }
+  .payout input { width: 96px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; font: inherit; }
+  .payout button { padding: 6px 14px; }
+  .empty { color: var(--soft); padding: 12px; }
+
+  /* settings */
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 14px; align-items: start; }
+  .settings h3 { font-size: 1.2rem; margin-bottom: 4px; }
+  .settings p.help { color: var(--soft); font-size: .88rem; margin: 0 0 12px; }
+  label.f { display: block; font-weight: 700; font-size: .88rem; margin-bottom: 12px; }
+  input[type=number], textarea { width: 100%; margin-top: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; background: #fff; color: var(--ink); }
+  textarea { resize: vertical; }
+  label.check { display: flex; gap: 8px; align-items: center; font-weight: 600; margin-bottom: 14px; }
+  button { font: 800 .9rem var(--sans); padding: 10px 20px; border-radius: 999px; border: 0; background: var(--coral); color: #fff; cursor: pointer; }
+  button:hover { background: #b24a35; }
+
+  @media (max-width: 640px) {
+    .month-nav h1 { font-size: 1.9rem; }
+    .cal { gap: 3px; }
+    .day { min-height: 62px; padding: 4px 5px; border-radius: 10px; }
+    .day .who { font-size: .62rem; }
+    .day .status { display: none; } /* color + legend carry the meaning on phones */
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="mark">P</span> {{ property.name }} <small>Rental agreement</small></div>
+    <a class="pill" href="/dashboard">&larr; Dashboard</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <h2>Rental agreement</h2>
+  <p class="sub">The contract guests sign. Edit it here and save; contracts already signed are unaffected, because each guest's copy is frozen when they sign.</p>
+  {% if has_unresolved_blanks %}
+  <div class="alert"><strong>Guests can't open their booking link yet:</strong> the text still contains a square-bracket blank like "[____]". Square brackets aren't allowed anywhere in the agreement, including prose.</div>
+  {% elif not property.contract_template %}
+  <div class="alert"><strong>No agreement loaded yet.</strong> Guests can't open their booking link until one is saved.</div>
+  {% endif %}
+  <div class="card">
+    <form method="post" action="/dashboard/contract-template">
+      <input type="hidden" name="return_to" value="contract">
+      {% if property_slug %}<input type="hidden" name="property_slug" value="{{ property_slug }}">{% endif %}
+      <label class="f"><textarea name="template" rows="32" style="font-family: ui-monospace, Menlo, monospace; font-size: .85rem;">{{ property.contract_template or "" }}</textarea></label>
+      <p class="help">Fill-in values, written like <code>{{ "{{ guest_name }}" }}</code>: guest_name, guest_email, guest_phone, check_in, check_out, check_in_iso, check_out_iso, nights, total, advance_payment, balance, balance_due_date, security_deposit, due_with_balance, deposit_return_days. Any other name makes the guest page fail.</p>
+      <button type="submit">Save agreement</button>
+    </form>
+  </div>
+</main>
+</body>
+</html>

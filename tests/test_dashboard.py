@@ -188,3 +188,34 @@ async def test_dashboard_post_rates_malformed_line_writes_nothing(client, sessio
         await session.execute(select(DailyRate).where(DailyRate.property_id == prop.id))
     ).scalars().all()
     assert len(rows) == 0
+
+
+async def test_contract_page_shows_and_saves_template(client, session, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    prop.contract_template = "Hello {{ guest_name }}"
+    await session.flush()
+
+    page = await client.get("/dashboard/contract", auth=AUTH)
+    assert page.status_code == 200
+    assert "Hello {{ guest_name }}" in page.text
+
+    resp = await client.post(
+        "/dashboard/contract-template",
+        data={"template": "Updated {{ guest_name }}", "return_to": "contract"},
+        auth=AUTH, follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/dashboard/contract"
+    await session.refresh(prop)
+    assert prop.contract_template == "Updated {{ guest_name }}"
+
+
+async def test_contract_page_requires_auth(client, prop):
+    assert (await client.get("/dashboard/contract")).status_code in (401, 503)
+
+
+async def test_dashboard_has_no_settings_section_but_links_contract(client, prop, monkeypatch):
+    monkeypatch.setattr(settings, "admin_password", "secret")
+    body = (await client.get("/dashboard", auth=AUTH)).text
+    assert "<h2>Settings</h2>" not in body
+    assert 'href="/dashboard/contract"' in body
