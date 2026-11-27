@@ -1,60 +1,536 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Your Booking — Ptown Perch</title></head>
-<body style="font-family: sans-serif; max-width: 640px; margin: 2rem auto;">
-  <h1>Your Booking</h1>
-  <p>{{ check_in }} → {{ check_out }} — Total due: {{ total }}</p>
-  <p>Send payment via Venmo (@ptownperch) or Zelle (bookings@ptownperch.com) for the total above.</p>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Booking — Ptown Perch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
+<style>
 
-  {% if signed %}
-    <h2>Signed rental agreement</h2>
-    <pre style="white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem;">{{ contract_text }}</pre>
-    <p>Signed by {{ signed_name }} on {{ signed_at }}. Thank you!</p>
-  {% else %}
-    <h2>Rental agreement — please review and sign</h2>
-    <pre style="white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem;">{{ contract_text }}</pre>
-    <form method="post" action="/book/{{ token }}/sign" id="sign-form">
-      <p><label>Full legal name <input type="text" name="signed_name" required></label></p>
-      <p><label>Home address <input type="text" name="guest_home_address" required></label></p>
-      <p><label>Occupant names (comma-separated) <input type="text" name="occupant_names" required></label></p>
-      <p>Signature:<br>
-        <canvas id="sig-pad" width="500" height="200" style="border:1px solid #333; touch-action:none;"></canvas><br>
-        <button type="button" id="sig-clear">Clear</button>
-      </p>
-      <input type="hidden" name="signature_image" id="signature_image">
-      <p><button type="submit">Sign and Submit</button></p>
-    </form>
-    <script>
-    (function () {
-      var canvas = document.getElementById('sig-pad');
-      var ctx = canvas.getContext('2d');
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      var drawing = false;
+:root{
+  --ink:#183138;
+  --soft:#4c6065;
+  --paper:#fffdf8;
+  --sand:#f4eee3;
+  --garden:#285746;
+  --garden2:#1e4638;
+  --coral:#c9563f;
+  --gold:#d6a535;
+  --line:rgba(24,49,56,.16);
+  --hair:rgba(24,49,56,.09);
+  --serif:Georgia,"Times New Roman",serif;
+  --sans:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --max:46rem;
+}
 
-      function pos(e) {
-        var rect = canvas.getBoundingClientRect();
-        var point = e.touches ? e.touches[0] : e;
-        return { x: point.clientX - rect.left, y: point.clientY - rect.top };
-      }
-      function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
-      function move(e) { if (!drawing) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }
-      function end() { drawing = false; }
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--sand);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
 
-      canvas.addEventListener('mousedown', start);
-      canvas.addEventListener('mousemove', move);
-      window.addEventListener('mouseup', end);
-      canvas.addEventListener('touchstart', start);
-      canvas.addEventListener('touchmove', move);
-      canvas.addEventListener('touchend', end);
-      document.getElementById('sig-clear').addEventListener('click', function () {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      });
-      document.getElementById('sign-form').addEventListener('submit', function () {
-        document.getElementById('signature_image').value = canvas.toDataURL('image/png');
-      });
-    })();
-    </script>
-  {% endif %}
+.sheet{
+  max-width:var(--max);
+  margin:40px auto 72px;
+  background:var(--paper);
+  padding:64px 68px 72px;
+  box-shadow:0 24px 70px rgba(24,49,56,.12);
+  border-radius:26px;
+}
+
+/* ---------- masthead ---------- */
+.masthead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:24px;
+  padding-bottom:22px;
+  border-bottom:2px solid var(--ink);
+}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-mark{
+  font-family:var(--serif);
+  font-size:30px;
+  line-height:1;
+  font-weight:500;
+  color:var(--paper);
+  background:var(--garden);
+  width:46px;height:46px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+  padding-bottom:3px;
+}
+.brand-name{
+  font-family:var(--serif);
+  font-size:23px;
+  letter-spacing:-.4px;
+  font-weight:500;
+}
+.brand-sub{
+  font-size:11.5px;
+  color:var(--soft);
+  letter-spacing:.2px;
+  margin-top:1px;
+}
+.reg{
+  text-align:right;
+  font-size:10.5px;
+  line-height:1.75;
+  color:var(--soft);
+  letter-spacing:.3px;
+  padding-top:4px;
+}
+.reg b{color:var(--ink);font-weight:600}
+
+.doctitle{
+  font-family:var(--serif);
+  font-size:38px;
+  line-height:1.05;
+  letter-spacing:-1.3px;
+  font-weight:500;
+  margin:34px 0 10px;
+}
+.dek{
+  color:var(--soft);
+  font-size:14px;
+  max-width:34rem;
+  margin:0 0 6px;
+}
+
+/* ---------- eyebrow ---------- */
+.eyebrow{
+  font-size:11px;
+  font-weight:850;
+  letter-spacing:1.8px;
+  text-transform:uppercase;
+  color:var(--garden);
+  margin:0 0 8px;
+}
+
+/* ---------- sections ---------- */
+h2{
+  font-family:var(--serif);
+  font-size:21px;
+  line-height:1.2;
+  letter-spacing:-.6px;
+  font-weight:500;
+  margin:40px 0 12px;
+  padding-top:18px;
+  border-top:1px solid var(--hair);
+  page-break-after:avoid;
+  break-after:avoid;
+}
+h2 .num{
+  font-family:var(--sans);
+  font-size:11px;
+  font-weight:850;
+  letter-spacing:1.6px;
+  color:var(--garden);
+  display:block;
+  margin-bottom:7px;
+}
+h3{
+  font-family:var(--sans);
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:-.1px;
+  margin:20px 0 6px;
+  page-break-after:avoid;
+  break-after:avoid;
+}
+p{margin:0 0 12px}
+ul{margin:0 0 14px;padding-left:0;list-style:none}
+li{
+  position:relative;
+  padding-left:18px;
+  margin-bottom:9px;
+}
+li::before{
+  content:"";
+  position:absolute;
+  left:0;top:.62em;
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--garden);
+}
+li b,p b{font-weight:650}
+em{color:var(--soft)}
+
+/* ---------- fill-in rules ---------- */
+.field{
+  display:block;
+  margin:0 0 13px;
+}
+.field .lab{
+  font-size:10.5px;
+  font-weight:800;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  color:var(--soft);
+  display:block;
+  margin-bottom:3px;
+}
+.rule{
+  display:block;
+  border-bottom:1px solid var(--line);
+  height:1.55em;
+}
+.val{display:block;border-bottom:1px solid var(--line);height:1.55em;font-weight:650;padding-top:.05em}
+.two{display:flex;gap:22px}
+.two>*{flex:1}
+
+/* ---------- key terms card ---------- */
+.card{
+  background:var(--sand);
+  border-radius:18px;
+  padding:24px 26px 20px;
+  margin:18px 0 22px;
+  page-break-inside:avoid;
+  break-inside:avoid;
+}
+.card.green{
+  background:var(--garden);
+  color:#eaf2ee;
+}
+.card.green .eyebrow{color:rgba(255,253,248,.72)}
+.card.green .rule,.card.green .val{border-bottom-color:rgba(255,253,248,.35)}
+.card.green .val{color:#fff}
+.card.green .lab{color:rgba(255,253,248,.72)}
+
+/* ---------- tables ---------- */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:4px 0 18px;
+  font-size:14px;
+  page-break-inside:avoid;
+  break-inside:avoid;
+}
+th{
+  text-align:left;
+  font-size:10.5px;
+  font-weight:850;
+  letter-spacing:1.4px;
+  text-transform:uppercase;
+  color:var(--soft);
+  padding:0 0 8px;
+  border-bottom:1px solid var(--line);
+}
+td{
+  padding:9px 0;
+  border-bottom:1px solid var(--hair);
+  vertical-align:top;
+}
+td:last-child,th:last-child{text-align:right;white-space:nowrap}
+tr.total td{
+  border-bottom:none;
+  border-top:2px solid var(--ink);
+  font-weight:800;
+  padding-top:11px;
+}
+tr.sub td{font-weight:650}
+tr.dep td{border-top:1px solid var(--hair);color:var(--soft);font-size:13px;padding-top:10px}
+
+/* ---------- risk section ---------- */
+.risk{
+  border:2px solid var(--ink);
+  border-radius:20px;
+  padding:28px 30px 24px;
+  margin:34px 0 26px;
+  background:var(--paper);
+}
+.risk h2{
+  border-top:none;
+  padding-top:0;
+  margin-top:0;
+}
+.risk .notice{
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  line-height:1.5;
+  background:var(--ink);
+  color:var(--paper);
+  padding:11px 15px;
+  border-radius:11px;
+  margin:0 0 20px;
+}
+.caps{
+  font-size:12.5px;
+  line-height:1.65;
+  letter-spacing:.15px;
+  margin:0 0 13px;
+}
+.caps b{font-weight:800}
+
+/* ---------- initials ---------- */
+.initials{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:14px;
+  margin:22px 0 2px;
+  padding-top:16px;
+  border-top:1px solid var(--line);
+  page-break-inside:avoid;
+  break-inside:avoid;
+}
+.initials .ask{
+  font-size:11px;
+  font-weight:850;
+  letter-spacing:1.4px;
+  text-transform:uppercase;
+  color:var(--garden);
+}
+.initials .box{
+  width:82px;height:42px;
+  border:1.5px solid var(--line);
+  border-radius:10px;
+}
+
+/* ---------- signatures ---------- */
+.signatures{
+  margin-top:36px;
+  padding-top:26px;
+  border-top:2px solid var(--ink);
+  page-break-inside:avoid;
+  break-inside:avoid;
+}
+.sigblock{margin-bottom:30px}
+.sigrow{display:flex;gap:26px;margin-top:20px}
+.sigrow .sig{flex:2}
+.sigrow .dt{flex:1}
+.sigline{
+  border-bottom:1px solid var(--ink);
+  height:2.6em;
+}
+.sigcap{
+  font-size:10.5px;
+  font-weight:800;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  color:var(--soft);
+  margin-top:5px;
+}
+
+/* ---------- colophon ---------- */
+.colophon{
+  margin-top:44px;
+  padding-top:20px;
+  border-top:1px solid var(--hair);
+  font-size:11px;
+  line-height:1.7;
+  color:var(--soft);
+}
+.colophon .mark{
+  font-family:var(--serif);
+  font-size:15px;
+  color:var(--ink);
+  letter-spacing:-.3px;
+  display:block;
+  margin-bottom:5px;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:640px){
+  .sheet{margin:0;border-radius:0;padding:36px 22px 48px}
+  .doctitle{font-size:29px;letter-spacing:-.9px}
+  .masthead{flex-direction:column;gap:14px}
+  .reg{text-align:left}
+  .two,.sigrow{flex-direction:column;gap:0}
+  .risk{padding:22px 18px 18px}
+}
+
+/* ---------- print ---------- */
+@page{margin:16mm 15mm 18mm}
+@media print{
+  html,body{background:#fff}
+  body{font-size:10.5pt;line-height:1.5}
+  .sheet{
+    max-width:none;margin:0;padding:0;
+    box-shadow:none;border-radius:0;background:#fff;
+  }
+  .card,.risk,.brand-mark{
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .doctitle{font-size:24pt}
+  h2{font-size:13pt;margin-top:22pt}
+  .risk{border-width:1.5pt}
+  .risk .notice{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{color:inherit;text-decoration:none}
+  .signatures,.initials,.card,table,.risk{page-break-inside:avoid}
+}
+
+
+/* --- guest page chrome, on top of the contract's own styles --- */
+.booking-head{
+  max-width:46rem;margin:40px auto 0;background:var(--garden);color:#eaf2ee;
+  border-radius:26px 26px 0 0;padding:34px 68px 28px;
+}
+.booking-head .eyebrow{color:rgba(255,253,248,.72);margin-bottom:10px}
+.booking-head h1{
+  font-family:var(--serif);font-size:32px;line-height:1.1;letter-spacing:-1px;
+  font-weight:500;margin:0 0 18px;color:#fff;
+}
+.sched{width:100%;border-collapse:collapse;font-size:14px;margin:0}
+.sched td{padding:8px 0;border-bottom:1px solid rgba(255,253,248,.22);vertical-align:top;color:#eaf2ee}
+.sched tr:last-child td{border-bottom:none}
+.sched td:last-child{text-align:right;white-space:nowrap;font-weight:700;color:#fff}
+.sched .muted{color:rgba(255,253,248,.72);font-size:12.5px}
+.paynote{
+  margin:18px 0 0;padding:14px 16px;border-radius:12px;
+  background:rgba(255,253,248,.1);font-size:13px;line-height:1.6;color:#eaf2ee;
+}
+.booking-head + .sheet{margin-top:0;border-radius:0 0 26px 26px}
+.signbox{
+  max-width:46rem;margin:0 auto 72px;background:var(--paper);
+  border-radius:0 0 26px 26px;padding:0 68px 56px;
+}
+.signbox h2{
+  font-family:var(--serif);font-size:22px;letter-spacing:-.6px;font-weight:500;
+  margin:0 0 6px;padding-top:28px;border-top:1px solid var(--hair);
+}
+.signbox .lede{color:var(--soft);font-size:14px;margin:0 0 22px}
+.f{display:block;margin:0 0 16px}
+.f span{
+  display:block;font-size:10.5px;font-weight:800;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--soft);margin-bottom:5px;
+}
+.f input{
+  width:100%;font-family:var(--sans);font-size:15px;color:var(--ink);
+  background:var(--paper);border:1px solid var(--line);border-radius:10px;
+  padding:11px 13px;
+}
+.f input:focus{outline:2px solid var(--garden);outline-offset:1px;border-color:var(--garden)}
+{% if not signed %}
+#sig-pad{
+  width:100%;max-width:500px;height:200px;border:1px solid var(--line);
+  border-radius:12px;background:var(--paper);touch-action:none;display:block;
+}
+{% endif %}
+.btn{
+  font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;
+  border-radius:999px;padding:13px 26px;border:1px solid var(--ink);
+}
+.btn-primary{background:var(--ink);color:var(--paper)}
+.btn-ghost{background:transparent;color:var(--soft);border-color:var(--line);
+  font-size:12.5px;font-weight:600;padding:7px 14px;margin-top:9px}
+.signed-note{
+  background:var(--sand);border-radius:14px;padding:16px 18px;margin:0 0 8px;
+  font-size:14px;
+}
+@media (max-width:640px){
+  .booking-head{margin:0;border-radius:0;padding:28px 22px 24px}
+  .booking-head h1{font-size:25px}
+  .booking-head + .sheet{border-radius:0}
+  .signbox{margin:0;border-radius:0;padding:0 22px 40px}
+}
+</style>
+</head>
+<body>
+
+<header class="booking-head">
+  <p class="eyebrow">Ptown Perch · 220 Commercial Street, Unit 3</p>
+  <h1>{% if signed %}Your booking is confirmed{% else %}Your booking{% endif %}</h1>
+
+  <table class="sched">
+    <tr>
+      <td>Stay<div class="muted">{{ check_in }} to {{ check_out }}</div></td>
+      <td>{{ nights }} nights</td>
+    </tr>
+    <tr>
+      <td>Total for the stay<div class="muted">Inclusive of all fees, cleaning and taxes</div></td>
+      <td>{{ total }}</td>
+    </tr>
+    <tr>
+      <td>Due at booking<div class="muted">Advance payment, credited toward the total</div></td>
+      <td>{{ advance_payment }}</td>
+    </tr>
+    <tr>
+      <td>Due by {{ balance_due_date }}<div class="muted">Balance of {{ balance }} plus the {{ security_deposit }} refundable security deposit</div></td>
+      <td>{{ due_with_balance }}</td>
+    </tr>
+  </table>
+
+  <p class="paynote">
+    <strong>Payment details are not published on this page.</strong>
+    We will send them to you directly. Before sending any money, please confirm
+    them with us by phone or text using a number you already have for us.
+    We will never ask you to change payment details by email alone.
+  </p>
+</header>
+
+<div class="sheet">
+{{ contract_text|safe }}
+</div>
+
+<div class="signbox">
+{% if signed %}
+  <h2>Signed</h2>
+  <p class="signed-note">Signed by <strong>{{ signed_name }}</strong> on {{ signed_at }}. Thank you — we will be in touch with payment details.</p>
+{% else %}
+  <h2>Review and sign</h2>
+  <p class="lede">By signing you agree to every term above, including Sections 13 and 17.</p>
+  <form method="post" action="/book/{{ token }}/sign" id="sign-form">
+    <label class="f"><span>Full legal name</span><input type="text" name="signed_name" required></label>
+    <label class="f"><span>Home address</span><input type="text" name="guest_home_address" required></label>
+    <label class="f"><span>Occupant names (comma-separated, 4 maximum)</span><input type="text" name="occupant_names" required></label>
+    <div class="f">
+      <span>Signature</span>
+      <canvas id="sig-pad" width="500" height="200"></canvas>
+      <button type="button" id="sig-clear" class="btn btn-ghost">Clear</button>
+    </div>
+    <input type="hidden" name="signature_image" id="signature_image">
+    <p><button type="submit" class="btn btn-primary">Sign and submit</button></p>
+  </form>
+  <script>
+  (function () {
+    var canvas = document.getElementById('sig-pad');
+    var ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    var drawing = false;
+
+    function pos(e) {
+      var rect = canvas.getBoundingClientRect();
+      var point = e.touches ? e.touches[0] : e;
+      // the canvas is CSS-scaled on narrow screens, so map back to its
+      // backing-store coordinates or the stroke lands off the pointer
+      return {
+        x: (point.clientX - rect.left) * (canvas.width / rect.width),
+        y: (point.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+    function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+    function move(e) { if (!drawing) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }
+    function end() { drawing = false; }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('touchmove', move);
+    canvas.addEventListener('touchend', end);
+    document.getElementById('sig-clear').addEventListener('click', function () {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+    document.getElementById('sign-form').addEventListener('submit', function () {
+      document.getElementById('signature_image').value = canvas.toDataURL('image/png');
+    });
+  })();
+  </script>
+{% endif %}
+</div>
+
 </body>
 </html>

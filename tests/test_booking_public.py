@@ -291,3 +291,43 @@ async def test_guest_page_undefined_template_variable_returns_503_not_500(client
 
     resp = await client.get("/book/tok-undefined")
     assert resp.status_code == 503
+
+
+async def test_guest_page_does_not_publish_payment_details(client, session, prop):
+    """Section 6 says payment details are never published and must be
+    confirmed out of band. The page previously hardcoded a Venmo handle and a
+    Zelle address, which defeated that clause for anyone who intercepted the
+    link."""
+    prop.contract_template = "Agreement for {{ guest_name }}"
+    res = Reservation(property_id=prop.id, source="direct", status="hold",
+                      guest_name="Alice", check_in=date(2026, 9, 1),
+                      check_out=date(2026, 9, 5), agreed_total_cents=200000,
+                      booking_token="tok-pay")
+    session.add(res)
+    await session.flush()
+
+    resp = await client.get("/book/tok-pay")
+    assert resp.status_code == 200
+    body = resp.content.lower()
+    for leak in (b"venmo.com", b"@ptownperch", b"bookings@ptownperch.com", b"zelle ("):
+        assert leak not in body, f"payment detail leaked onto the guest page: {leak!r}"
+    # and it should say so explicitly
+    assert b"not published on this page" in body
+
+
+async def test_guest_page_shows_the_payment_schedule(client, session, prop):
+    """A guest must not read the Total as the amount due today."""
+    prop.contract_template = "Agreement for {{ guest_name }}"
+    res = Reservation(property_id=prop.id, source="direct", status="hold",
+                      guest_name="Alice", check_in=date(2026, 9, 1),
+                      check_out=date(2026, 9, 5), agreed_total_cents=200000,
+                      booking_token="tok-sched")
+    session.add(res)
+    await session.flush()
+
+    resp = await client.get("/book/tok-sched")
+    body = resp.content.decode()
+    assert "$2,000.00" in body           # total
+    assert "$1,000.00" in body           # advance, and the balance
+    assert "Due at booking" in body
+    assert "August 2, 2026" in body      # balance due, 30 days before check-in
