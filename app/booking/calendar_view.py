@@ -24,7 +24,7 @@ def build_month_calendar(
         for r in reservations:
             if r.check_in <= d < r.check_out:
                 if r.source == "airbnb_ical" and r.status == "confirmed":
-                    status, label = "airbnb", None
+                    status, label = ("blocked", None) if r.is_airbnb_block else ("airbnb", None)
                 elif r.source == "direct" and r.status == "hold":
                     status, label = "direct_hold", r.guest_name
                 elif r.source == "direct" and r.status == "confirmed":

@@ -14,7 +14,8 @@ async def test_dashboard_requires_auth(client, prop):
 
 
 async def test_post_handlers_require_auth(client):
-    for path in ("/dashboard/config", "/dashboard/contract-template", "/dashboard/rates"):
+    for path in ("/dashboard/config", "/dashboard/contract-template", "/dashboard/rates",
+                 "/dashboard/airbnb-payout"):
         resp = await client.post(path, data={})
         assert resp.status_code in (401, 503)
 

@@ -18,6 +18,7 @@ class PeriodSummary:
     occupied_nights: int
     total_nights: int
     unpriced_nights: int
+    airbnb_collected_cents: int = 0
 
     @property
     def occupancy_pct(self) -> float:
@@ -38,17 +39,17 @@ def summarize_period(
     (Reservation.agreed_total_cents, tax-inclusive, cleaning fee folded in;
     the refundable security deposit is not revenue and is excluded). A stay
     that straddles the period boundary contributes its total prorated by
-    nights, rounded half-up. Airbnb (iCal) bookings carry no price and count
-    toward occupancy only. A direct stay with no agreed total is counted in
+    nights, rounded half-up. Airbnb (iCal) bookings carry no price; the payout
+    is entered by hand (airbnb_payout_cents) and counts as collected when set. A direct stay with no agreed total is counted in
     ``unpriced_nights`` rather than silently treated as zero.
     """
-    collected = outstanding = unpriced = 0
+    collected = outstanding = unpriced = airbnb_rev = 0
     direct_nights = airbnb_nights = 0
     occupied: set[date] = set()
 
     for r in reservations:
-        if r.status not in _OCCUPYING:
-            continue
+        if r.status not in _OCCUPYING or r.is_airbnb_block:
+            continue  # Airbnb "Not available" blocks aren't stays
         nights = _nights_in_period(r, start, end)
         if not nights:
             continue
@@ -56,6 +57,11 @@ def summarize_period(
 
         if r.source == "airbnb_ical":
             airbnb_nights += len(nights)
+            if r.airbnb_payout_cents is not None:
+                stay_nights = (r.check_out - r.check_in).days
+                airbnb_rev += (r.airbnb_payout_cents * len(nights) * 2 + stay_nights) // (
+                    stay_nights * 2
+                )
             continue
         if r.source != "direct":
             continue
@@ -72,7 +78,8 @@ def summarize_period(
             outstanding += share
 
     return PeriodSummary(
-        collected_cents=collected,
+        collected_cents=collected + airbnb_rev,
+        airbnb_collected_cents=airbnb_rev,
         outstanding_cents=outstanding,
         direct_nights=direct_nights,
         airbnb_nights=airbnb_nights,

@@ -68,6 +68,9 @@
   .badge.hold { background: #f8ecc8; color: #7a5a0a; }
   .badge.inquiry { background: #dfe8ee; color: #2c4a5a; }
   .src { color: var(--soft); }
+  .payout { display: flex; gap: 6px; align-items: center; }
+  .payout input { width: 96px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; font: inherit; }
+  .payout button { padding: 6px 14px; }
   .empty { color: var(--soft); padding: 12px; }
 
   /* settings */
@@ -114,12 +117,12 @@
   </div>
 
   <h2>Revenue</h2>
-  <p class="sub">Direct bookings only &mdash; each card shows {{ month_name }}, with the year to date underneath.</p>
+  <p class="sub">Direct totals plus any Airbnb payouts you enter &mdash; each card shows {{ month_name }}, with the year to date underneath.</p>
   <div class="stats">
     <div class="stat good">
       <div class="label">Collected (paid)</div>
       <div class="big">{{ money(month_summary.collected_cents) }}</div>
-      <div class="ytd">{{ money(ytd_summary.collected_cents) }} year to date</div>
+      <div class="ytd">{{ money(ytd_summary.collected_cents) }} year to date{% if ytd_summary.airbnb_collected_cents %} &middot; incl. {{ money(ytd_summary.airbnb_collected_cents) }} Airbnb{% endif %}</div>
     </div>
     <div class="stat warn">
       <div class="label">Outstanding (unpaid holds)</div>
@@ -141,7 +144,7 @@
   <div class="alert"><strong>{{ ytd_summary.unpriced_nights }} direct night(s) this year have no agreed total</strong> and are left out of these totals. Enter the total when approving the inquiry in Slack.</div>
   {% endif %}
   <p class="note">
-    Airbnb payouts aren't tracked, so Airbnb nights count toward occupancy but not revenue.
+    Airbnb payouts come from the amounts you enter in the Payout column below; Airbnb bookings with no payout entered add occupancy but no revenue.
     Amounts are the agreed totals (tax-inclusive, cleaning fee included, security deposit excluded); a stay spanning two months is split by nights.
   </p>
 
@@ -173,15 +176,28 @@
   <div class="card tablewrap">
     {% if reservations %}
     <table>
-      <tr><th>Guest</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Source</th><th>Status</th></tr>
+      <tr><th>Guest</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Source</th><th>Status</th><th>Payout</th></tr>
       {% for r in reservations %}
       <tr>
         <td>{{ r.guest_name or "—" }}</td>
         <td>{{ r.check_in }}</td>
         <td>{{ r.check_out }}</td>
         <td>{{ (r.check_out - r.check_in).days }}</td>
-        <td class="src">{{ "Airbnb" if r.source == "airbnb_ical" else "Direct" }}</td>
+        <td class="src">{{ ("Airbnb block" if r.is_airbnb_block else "Airbnb") if r.source == "airbnb_ical" else "Direct" }}</td>
         <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+        <td>
+          {% if r.source == "airbnb_ical" and not r.is_airbnb_block %}
+          <form method="post" action="/dashboard/airbnb-payout" class="payout">
+            <input type="hidden" name="reservation_id" value="{{ r.id }}">
+            <input type="hidden" name="year" value="{{ year }}">
+            <input type="hidden" name="month" value="{{ month }}">
+            {% if property_slug %}<input type="hidden" name="property_slug" value="{{ property_slug }}">{% endif %}
+            <input type="text" inputmode="decimal" name="payout_dollars" placeholder="$ payout"
+                   value="{{ '%.2f'|format(r.airbnb_payout_cents / 100) if r.airbnb_payout_cents is not none else '' }}">
+            <button type="submit">Save</button>
+          </form>
+          {% elif r.source == "direct" and r.agreed_total_cents is not none %}{{ money(r.agreed_total_cents) }}{% endif %}
+        </td>
       </tr>
       {% endfor %}
     </table>
