@@ -1,0 +1,451 @@
+PTOWN PERCH
+220 Commercial Street, Unit 3, Provincetown, MA 02657
+Town of Provincetown rental registration BOH-25-397
+
+                   SHORT-TERM RENTAL AGREEMENT
+
+Please read this in full. Sections 13 and 17 affect your legal rights.
+
+
+1. PARTIES
+
+Owner:  Frank Fay and Jared Tiller ("Owner")
+Guest:  {{ guest_name }} ("Guest")
+        {{ guest_email }}
+        {{ guest_phone }}
+
+The individual signing this Agreement must be at least 25 years of age,
+must be the person whose payment method is used, and must personally
+occupy the Property for the entire Rental Period. Bookings made on behalf
+of a third party who will occupy the Property without the signing Guest
+present are prohibited and are grounds for immediate cancellation without
+refund.
+
+Authority to bind. Guest represents and warrants that Guest has full
+authority to enter into this Agreement on behalf of every person who will
+occupy or visit the Property during the Rental Period, including minors,
+and that Guest has informed them of its terms. Guest is jointly and
+severally liable with all occupants for every obligation under this
+Agreement.
+
+
+2. THE PROPERTY
+
+Owner agrees to rent to Guest the one-bedroom residential condominium unit
+located at 220 Commercial Street, Unit 3, Provincetown, MA 02657, together
+with the private rear garden (the "Property"). The Property is located
+within a mixed-use condominium building containing commercial businesses
+on the ground floor and other residential units.
+
+
+3. RENTAL PERIOD
+
+Check-in     {{ check_in }} at or after 3:00 PM
+Check-out    {{ check_out }} at or before 11:00 AM
+Nights       {{ nights }}
+
+Early check-in and late check-out are available only by prior written
+agreement with Owner.
+
+
+4. OCCUPANCY
+
+Overnight occupancy. Maximum overnight occupancy is four (4) persons,
+including children. No person other than the named occupants may stay
+overnight at the Property. This limit reflects applicable Massachusetts
+and Town of Provincetown occupancy standards and may not be exceeded at
+any time.
+
+Daytime visitors. Guest may host a reasonable number of daytime visitors,
+not to exceed two (2) at any one time, provided that the total number of
+persons at the Property never exceeds six (6), that visitors are
+accompanied by Guest at all times, and that no visitor remains at the
+Property during quiet hours. Visitors are subject to every rule in
+Section 10, and Guest is responsible for their conduct under Section 13.
+Nothing in this paragraph permits a party, event, or gathering, which is
+prohibited under Section 10 regardless of the number of people present.
+
+Every overnight occupant must be named before check-in:
+
+  1. ______________________________   2. ______________________________
+
+  3. ______________________________   4. ______________________________
+
+Exceeding the overnight occupancy limit is a material breach and grounds
+for immediate termination of the stay without refund, plus a charge of
+$150 per unauthorized overnight occupant per night.
+
+
+5. RENT
+
+Total for the stay                                        {{ total }}
+
+This is the full, agreed price for the Rental Period. It is inclusive of
+all fees, cleaning and applicable taxes. No further amount is payable
+other than the refundable security deposit below and any charge arising
+under Sections 4, 8 or 10.
+
+Refundable security deposit                     {{ security_deposit }}
+
+The security deposit is not rent, is not part of the Total, and is
+returned under Section 8.
+
+
+6. PAYMENT SCHEDULE
+
+At booking                                       {{ advance_payment }}
+  Advance payment, credited toward the Total.
+
+By {{ balance_due_date }}                           {{ due_with_balance }}
+  Balance of {{ balance }} plus the {{ security_deposit }} security
+  deposit.
+
+For bookings made fewer than 30 days before check-in, the full Total and
+the security deposit are payable at booking. Failure to pay the balance by
+the due date permits Owner to cancel and retain the advance payment under
+Section 7.
+
+Accepted payment methods. Owner accepts the following, and no others:
+Zelle, Apple Cash, Venmo, and USDC on the network Owner specifies at
+booking. Owner does not accept cash, checks, wire transfers, credit or
+debit cards, or any method not listed here.
+
+Payment instructions. Owner will provide payment details directly to Guest
+at the time of booking. Payment details are not published in this
+Agreement. Guest shall confirm payment details with Owner by a second
+channel, being a phone call or a message to a number Guest already holds
+for Owner, before sending any funds, and Owner shall not be responsible
+for funds sent to any destination not confirmed in this manner. OWNER WILL
+NEVER REQUEST THAT PAYMENT DETAILS BE CHANGED BY EMAIL ALONE.
+
+Fees and amounts received. Guest is responsible for any fee charged by
+Guest's own payment provider, and for any network or transfer fee, such
+that the amount Owner receives equals the amount due. If the amount
+received is less than the amount due, Guest shall remit the shortfall
+promptly, and the reservation is not confirmed until the full amount is
+received.
+
+USDC payments. Payment in USDC is accepted only on the network Owner
+specifies at booking, sent to the address Owner provides and Guest
+confirms as set out above. Guest bears all network fees and all risk of
+loss from sending to an incorrect address, an unsupported network, or an
+incorrect asset, and such a transfer does not satisfy Guest's payment
+obligation. The amount due is denominated in United States dollars;
+payment is credited at the U.S. dollar value of USDC received, and any
+shortfall remains payable.
+
+Refunds. Any refund under this Agreement is issued in United States
+dollars by the same method used for payment where practicable, or
+otherwise by a method Owner reasonably elects. A refund of a USDC payment
+is issued at the United States dollar amount credited under this Section,
+not at any later value of the asset.
+
+Confirmation. The reservation is not confirmed and dates are not held
+until Owner has received cleared funds and Guest has signed this
+Agreement.
+
+
+7. CANCELLATION AND REFUNDS
+
+  More than 60 days before check-in    100% less a $50 processing fee
+  60 to 30 days before check-in        50%
+  Fewer than 30 days before check-in   No refund
+
+The security deposit is refunded in full on any cancellation.
+
+No refund is given for early departure, late arrival, unused nights,
+inclement weather, travel disruption, road or ferry conditions, or changes
+in Guest's personal circumstances. Guest is strongly encouraged to
+purchase travel insurance.
+
+If Owner cancels for any reason other than Guest's breach, Owner shall
+refund all amounts paid. Owner's liability for such cancellation is
+limited to that refund.
+
+
+8. SECURITY DEPOSIT AND DAMAGE
+
+The refundable security deposit of {{ security_deposit }} is payable with
+the balance under Section 6 and is returned within {{ deposit_return_days }}
+days after check-out, less any deductions for damage, excess cleaning,
+missing items, or violations of this Agreement. Owner will provide an
+itemized statement for any deduction.
+
+Guest is liable for all damage to the Property, its furnishings, its
+contents, and the common areas of the condominium occurring during the
+Rental Period, whether caused by Guest, other occupants, or Guest's
+visitors, and whether or not the security deposit covers it. Liability is
+not limited to the amount of the security deposit.
+
+
+9. CONDITION OF THE PROPERTY
+
+Guest accepts the Property in its current condition, AS IS, and
+acknowledges that Owner makes no warranty, express or implied, of
+habitability, fitness for a particular purpose, or suitability for Guest's
+intended use beyond ordinary residential occupancy.
+
+Guest shall inspect the Property upon arrival and report any defect,
+hazard, damage, or missing item to Owner WITHIN FOUR (4) HOURS OF
+CHECK-IN. Absent such notice, the Property is deemed accepted in good and
+safe condition.
+
+Guest shall notify Owner promptly of any damage, malfunction, hazard, or
+maintenance issue arising during the stay and allow reasonable access for
+repair. Owner will make reasonable efforts to correct problems promptly
+but does not guarantee uninterrupted service of utilities, internet,
+heating, cooling, or appliances. No refund or rate reduction is owed for
+interruptions outside Owner's reasonable control, though Owner may offer
+one at Owner's discretion.
+
+Smoke and carbon monoxide detectors. Guest acknowledges that working smoke
+and carbon monoxide detectors and a fire extinguisher are present at
+check-in. Guest shall not disable, remove, or obstruct any detector and
+shall notify Owner immediately if any alarm sounds or malfunctions.
+
+
+10. OCCUPANCY RULES
+
+Each of the following is a material term of this Agreement.
+
+  No smoking or vaping of any substance anywhere on the Property,
+  including the garden, windows, and doorways. Violation incurs a
+  remediation charge of $500.
+
+  No parties, events, or gatherings. The Property may not be used for any
+  commercial purpose, photography or filming, or any event beyond the
+  registered occupants.
+
+  Quiet hours from 10:00 PM to 8:00 AM. The Property adjoins occupied
+  residences and sits above operating businesses. Guest agrees to keep
+  noise in the unit, the garden, and on Commercial Street considerate at
+  all times.
+
+  Condominium rules. The Property is subject to the rules and regulations
+  of the condominium association, provided in the house manual. Guest is
+  responsible for any fine, assessment, or penalty levied against Owner as
+  a result of Guest's conduct.
+
+  No pets. No animal of any kind may be brought to or kept at the Property
+  at any time, including by visitors and including animals left unattended
+  in a vehicle on the premises. Bringing an undisclosed animal is a
+  material breach, incurs a charge of $500 for allergen remediation and
+  deep cleaning, and is grounds for immediate termination of the stay
+  without refund under Section 14. Guest is additionally liable for any
+  damage the animal causes and for any claim, fine, or assessment arising
+  from its presence.
+
+  Service animals. The no-pet policy does not apply to a service animal
+  that Owner is required by applicable law to accommodate. Guest shall
+  notify Owner prior to arrival if a service animal will accompany Guest.
+  A service animal must be under Guest's control at all times, must not be
+  left unattended at the Property, and Guest remains fully responsible and
+  liable for any damage or injury it causes, including under Massachusetts
+  law imposing liability on the keeper of a dog. An animal that is not a
+  service animal within the meaning of applicable law, including an animal
+  described as an emotional support, comfort, or therapy animal, is a pet
+  for purposes of this Agreement.
+
+  No subletting or reassignment of the reservation.
+
+  Parking is not provided. The Property includes no parking space of any
+  kind. Public municipal parking is available in Provincetown at Guest's
+  own expense and on a first-come basis. Guest is solely responsible for
+  locating parking and for all parking fees, tickets, and towing costs.
+  Owner makes no representation that parking will be available.
+
+  Trash and recycling must be sorted and placed as described in the house
+  manual, per Town of Provincetown collection rules.
+
+  Locking up. Guest shall lock all doors and windows when absent.
+
+  Prohibited: candles, open flame, space heaters, grills, fireworks,
+  firearms, drones, and illegal substances.
+
+  Compliance with law. Guest and all occupants shall comply with all
+  applicable federal, state, and Town of Provincetown laws and ordinances.
+  Any illegal activity terminates this Agreement immediately.
+
+
+11. TRANSIENT OCCUPANCY; NO TENANCY
+
+The Rental Period is 31 consecutive calendar days or fewer. Guest is a
+transient occupant, not a tenant. This Agreement creates a license to
+occupy the Property for the stated Rental Period only. It creates no
+tenancy, no leasehold interest, and no rights under Massachusetts
+landlord-tenant law, including any right to notice to quit or to summary
+process protections. Guest agrees to vacate at the stated check-out time.
+
+
+12. ACCESS
+
+Owner and Owner's agents may enter the Property during the Rental Period,
+with reasonable notice where practicable, to make repairs, address an
+emergency, respond to a suspected violation of this Agreement, or show the
+Property. No notice is required in an emergency.
+
+
+13. ASSUMPTION OF RISK, RELEASE, AND INDEMNIFICATION
+
+GUEST SHOULD READ THIS SECTION CAREFULLY. IT LIMITS LEGAL RIGHTS,
+INCLUDING THE RIGHT TO RECOVER DAMAGES FOR INJURY.
+
+13.1 ASSUMPTION OF RISK. GUEST AND ALL OCCUPANTS USE THE PROPERTY ENTIRELY
+AT THEIR OWN RISK. GUEST ACKNOWLEDGES THAT THE PROPERTY IS LOCATED IN AN
+OLDER MIXED-USE BUILDING IN A DENSE COASTAL DOWNTOWN AND THAT ITS FEATURES
+MAY INCLUDE, WITHOUT LIMITATION: STAIRS AND STAIRWAYS THAT MAY BE STEEP,
+NARROW, OR IRREGULAR; UNEVEN FLOORS, THRESHOLDS, AND WALKWAYS; LOW
+CLEARANCES; SLIPPERY SURFACES WHEN WET; OUTDOOR GARDEN AREAS WITH UNEVEN
+GROUND, PLANTINGS, AND FURNITURE; PROXIMITY TO A BUSY PUBLIC STREET AND TO
+COMMERCIAL ESTABLISHMENTS; SEASONAL WEATHER INCLUDING STORMS, FLOODING,
+WIND, SNOW, AND ICE; AND INSECTS, TICKS, AND WILDLIFE. GUEST VOLUNTARILY
+ASSUMES ALL RISKS ASSOCIATED WITH THESE AND ALL OTHER CONDITIONS, WHETHER
+KNOWN OR UNKNOWN.
+
+13.2 SUPERVISION OF MINORS. GUEST IS SOLELY RESPONSIBLE FOR THE
+SUPERVISION AND SAFETY OF ANY MINOR AT THE PROPERTY AT ALL TIMES. THE
+PROPERTY IS NOT CHILDPROOFED.
+
+13.3 RELEASE. TO THE FULLEST EXTENT PERMITTED BY MASSACHUSETTS LAW, GUEST,
+ON BEHALF OF GUEST AND ALL OCCUPANTS AND VISITORS, RELEASES AND DISCHARGES
+OWNER, OWNER'S AGENTS, EMPLOYEES, CONTRACTORS, AND THE CONDOMINIUM
+ASSOCIATION FROM ANY AND ALL CLAIMS FOR BODILY INJURY, ILLNESS, DEATH, OR
+LOSS OF OR DAMAGE TO PERSONAL PROPERTY ARISING OUT OF OR RELATING TO THE
+USE OF THE PROPERTY, INCLUDING CLAIMS ARISING FROM OWNER'S ORDINARY
+NEGLIGENCE. THIS RELEASE DOES NOT APPLY TO GROSS NEGLIGENCE OR WILLFUL
+MISCONDUCT.
+
+13.4 INDEMNIFICATION. GUEST SHALL DEFEND, INDEMNIFY, AND HOLD HARMLESS
+OWNER AND OWNER'S AGENTS FROM AND AGAINST ANY CLAIM, DEMAND, SUIT, LOSS,
+FINE, ASSESSMENT, LIABILITY, OR EXPENSE, INCLUDING REASONABLE ATTORNEYS'
+FEES AND COSTS, BROUGHT BY OR ARISING FROM: (A) GUEST, ANY OCCUPANT, ANY
+MINOR IN GUEST'S CARE, OR ANY VISITOR; (B) ANY NEIGHBOR, OTHER UNIT OWNER,
+COMMERCIAL TENANT, OR THIRD PARTY, ARISING FROM THE CONDUCT OF GUEST OR
+ANY OCCUPANT OR VISITOR; (C) THE CONDOMINIUM ASSOCIATION, INCLUDING ANY
+FINE OR ASSESSMENT; OR (D) ANY BREACH OF THIS AGREEMENT.
+
+13.5 NO INSURANCE FOR GUEST PROPERTY. OWNER'S INSURANCE DOES NOT COVER
+GUEST'S PERSONAL PROPERTY OR GUEST'S LIABILITY. GUEST IS RESPONSIBLE FOR
+OBTAINING TRAVEL AND PERSONAL PROPERTY INSURANCE AND WAIVES ANY RIGHT OF
+SUBROGATION ITS INSURER MAY HAVE AGAINST OWNER.
+
+13.6 LIMITATION OF LIABILITY. TO THE FULLEST EXTENT PERMITTED BY LAW,
+OWNER'S TOTAL LIABILITY ARISING OUT OF OR RELATING TO THIS AGREEMENT OR
+THE PROPERTY SHALL NOT EXCEED THE TOTAL AMOUNT PAID BY GUEST FOR THE
+RENTAL PERIOD. OWNER SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING TRAVEL COSTS, ALTERNATIVE
+LODGING, LOST WAGES, OR LOSS OF ENJOYMENT.
+
+13.7 SAVINGS CLAUSE. IF ANY PORTION OF THIS SECTION 13 IS HELD
+UNENFORCEABLE, IT SHALL BE REFORMED AND ENFORCED TO THE MAXIMUM EXTENT
+PERMITTED BY LAW, AND THE REMAINDER SHALL REMAIN IN FULL FORCE.
+
+
+14. TERMINATION FOR BREACH
+
+If Guest breaches any material term, including occupancy limits, the
+prohibition on parties, smoking, pets, illegal activity, condominium
+rules, or repeated noise complaints, Owner may terminate the Rental Period
+immediately and require Guest and all occupants to vacate. No refund is
+owed, and Guest remains liable for all resulting damage, fines, and costs.
+
+
+15. FORCE MAJEURE
+
+If the Property becomes unavailable or uninhabitable due to fire, flood,
+storm, utility failure, condominium action, government order, or other
+cause outside Owner's reasonable control, Owner may cancel and shall
+refund amounts paid for the affected nights. That refund is Guest's sole
+remedy, and Owner is not liable for travel costs, alternative lodging, or
+other consequential damages.
+
+
+16. PAYMENT DISPUTES AND REVERSALS
+
+Guest agrees to contact Owner directly and allow a reasonable opportunity
+to resolve any concern regarding the stay or the charges before initiating
+any dispute, reversal, recall, or claim with a bank, payment provider, or
+other third party. Guest acknowledges that this signed Agreement,
+including its cancellation terms in Section 7, governs the transaction,
+and that a dispute raised with a payment provider does not alter those
+terms.
+
+Guest acknowledges that the payment methods accepted under Section 6 are
+generally final and not reversible, and that Guest has chosen a method on
+that basis. Where a reversal, recall, or claim is nonetheless initiated
+and is resolved in Owner's favor, Guest shall reimburse Owner's reasonable
+costs of responding, including any fee charged by a bank or payment
+provider. Any dispute not resolved under this Section proceeds under
+Section 17.
+
+
+17. DISPUTE RESOLUTION
+
+17.1 Notice and good-faith resolution. Before commencing any proceeding,
+the complaining party shall give the other written notice describing the
+dispute and allow thirty (30) days to resolve it.
+
+17.2 Mediation. If unresolved, the parties shall first submit the dispute
+to non-binding mediation in Barnstable County, Massachusetts, with costs
+shared equally.
+
+17.3 Governing law and venue. This Agreement is governed by the laws of
+the Commonwealth of Massachusetts without regard to conflict-of-law
+principles. Any proceeding shall be brought exclusively in the state or
+federal courts sitting in Barnstable County, Massachusetts, and Guest
+consents to personal jurisdiction there.
+
+17.4 JURY WAIVER. TO THE FULLEST EXTENT PERMITTED BY LAW, EACH PARTY
+WAIVES ANY RIGHT TO TRIAL BY JURY.
+
+17.5 No class actions. Guest may bring claims only in an individual
+capacity and not as a plaintiff or class member in any purported class or
+representative proceeding.
+
+17.6 Attorneys' fees. In any proceeding arising out of this Agreement, the
+prevailing party shall be entitled to recover reasonable attorneys' fees
+and costs.
+
+
+18. GENERAL
+
+18.1 Entire agreement. This Agreement, together with the house manual, is
+the entire agreement between the parties and supersedes all prior
+communications, including any listing description, website content,
+photograph, or correspondence. It may be amended only in writing signed by
+both parties.
+
+18.2 No third-party beneficiaries. Except for the indemnified parties
+named in Section 13, this Agreement creates no rights in any third party.
+
+18.3 Severability. If any provision is held unenforceable, the remainder
+stays in force.
+
+18.4 No waiver. Owner's failure to enforce any provision is not a waiver
+of that or any other provision.
+
+18.5 Notices. Notices shall be sent to the email addresses stated in this
+Agreement and are deemed received on the next business day.
+
+18.6 Electronic signature. The parties agree that this Agreement may be
+executed electronically and that an electronic signature has the same
+force as an original. Guest consents to Owner's retention of the signed
+record, including signature timestamp and IP address.
+
+18.7 Survival. Sections 8, 13, 16, 17, and 18 survive the end of the
+Rental Period.
+
+
+19. ACCEPTANCE
+
+By signing below, Guest acknowledges that Guest has read and understood
+every term of this Agreement, including the assumption of risk, release,
+indemnification, and limitation of liability in Section 13 and the dispute
+resolution terms in Section 17; that Guest has had the opportunity to
+review this Agreement with counsel of Guest's choosing; that Guest enters
+into it voluntarily; and that Guest has authority to bind all occupants
+and visitors.
+
+Guest: {{ guest_name }}
+Stay:  {{ check_in }} to {{ check_out }} ({{ nights }} nights)
+Total: {{ total }}
