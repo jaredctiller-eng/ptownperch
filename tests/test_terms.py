@@ -72,10 +72,10 @@ def test_balance_due_crosses_a_year_boundary():
 
 def test_security_deposit_is_flat_and_on_top():
     terms = compute_terms(total_cents=200000, check_in=date(2027, 7, 9))
-    assert terms.security_deposit_cents == SECURITY_DEPOSIT_CENTS == 5000
+    assert terms.security_deposit_cents == SECURITY_DEPOSIT_CENTS == 50000
     # The deposit is NOT part of the total — it is extra, and refundable.
     assert terms.advance_cents + terms.balance_cents == terms.total_cents
-    assert terms.due_with_balance_cents == terms.balance_cents + 5000
+    assert terms.due_with_balance_cents == terms.balance_cents + 50000
 
 
 def test_zero_or_negative_total_refused():

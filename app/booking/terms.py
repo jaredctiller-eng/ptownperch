@@ -23,7 +23,7 @@ from decimal import ROUND_HALF_UP, Decimal
 # renders `contract_snapshot`, frozen at signing time.
 ADVANCE_PERCENT = Decimal("0.50")       # due at booking, credited toward the total
 BALANCE_LEAD_DAYS = 30                  # balance due this many days before check-in
-SECURITY_DEPOSIT_CENTS = 50_00          # refundable, on top of the total, not rent
+SECURITY_DEPOSIT_CENTS = 500_00         # refundable, on top of the total, not rent
 DEPOSIT_RETURN_DAYS = 14                # returned within this many days of check-out
 
 # The agreed total is tax-inclusive: total / 1.1445 is the rent to report on
