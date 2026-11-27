@@ -168,9 +168,28 @@ async def dashboard_set_airbnb_payout(
     return _redirect_to_dashboard(year, month, property_slug)
 
 
+@router.get("/contract", response_class=HTMLResponse)
+async def contract_page(
+    request: Request,
+    property_slug: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    prop = await _get_property_or_404(session, property_slug or settings.property_slug)
+    return templates.TemplateResponse(
+        request,
+        "contract.html",
+        {
+            "property": prop,
+            "has_unresolved_blanks": has_unresolved_blanks(prop.contract_template or ""),
+            "property_slug": property_slug,
+        },
+    )
+
+
 @router.post("/contract-template")
 async def dashboard_update_template(
     template: str = Form(...),
+    return_to: str = Form(""),
     year: int | None = Form(None),
     month: int | None = Form(None),
     property_slug: str | None = Form(None),
@@ -178,6 +197,9 @@ async def dashboard_update_template(
 ):
     payload = admin.ContractTemplateUpdate(template=template)
     await admin.update_contract_template(payload, property_slug, session)
+    if return_to == "contract":
+        suffix = f"?property_slug={property_slug}" if property_slug else ""
+        return RedirectResponse(url=f"/dashboard/contract{suffix}", status_code=303)
     return _redirect_to_dashboard(year, month, property_slug)
 
 
